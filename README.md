@@ -1,3 +1,4 @@
+<div class="text-orange-light mb-2">
 # Franka-Emika Panda Setup
 
 **Linux: Unbuntu 18.04 LTS (Bionic Beaver)** 
@@ -5,7 +6,7 @@
 **ROS: melodic** 
 
 **Real-time kernel: 5.4.40-rt24 (may change)**
- 
+</div>
 
  ---
 
