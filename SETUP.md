@@ -300,7 +300,7 @@ Type in the `Topic` input field the full path of the topic name, and press `+` b
 To source directories:
 ```
 source /opt/ros/melodic/setup.sh
-source ./catkin_ws/devel/setup.bash
+source ~/catkin_ws/devel/setup.bash
 source ~/ws_moveit/devel/setup.bash
 ```
 
