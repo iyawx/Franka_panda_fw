@@ -83,7 +83,7 @@ sudo apt install build-essential cmake git libpoco-dev libeigen3-dev
 sudo git clone --recursive https://github.com/frankaemika/libfranka 
 cd libfranka 
 mkdir build 
-sudo cd build 
+cd build 
 sudo cmake -DCMAKE_BUILD_TYPE=Release .. 
 sudo cmake --build . 
 ```
