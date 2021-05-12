@@ -1,9 +1,0 @@
-<library path="lib/libfranka_panda_controller_swc">
-  <class name="franka_panda_contorller/JointImpedanceController" 
-	type="franka_panda_contorller::JointImpedanceController" 
-	base_class_type="controller_interface::ControllerBase">
-    <description>
-      A controller that tracks a cartesian path with a joint impedance controller that compensates coriolis torques. The torque commands are compared to measured torques in Console outputs.
-    </description>
-  </class>
-</library>
