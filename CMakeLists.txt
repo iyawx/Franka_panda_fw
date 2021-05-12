@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
-find_package(Franka 0.7.0 REQUIRED)
+find_package(Franka 0.5.0 REQUIRED)
 
 add_message_files(FILES
   JointTorqueComparison.msg
@@ -38,7 +38,7 @@ generate_dynamic_reconfigure_options(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES franka_example_controllers
+  LIBRARIES franka_panda_controller_swc
   CATKIN_DEPENDS
     controller_interface
     dynamic_reconfigure
@@ -55,11 +55,11 @@ catkin_package(
   DEPENDS Franka
 )
 
-add_library(${PROJECT_NAME}
+add_library(franka_panda_controller_swc
   src/joint_impedance_controller.cpp
 )
 
-add_dependencies(${PROJECT_NAME}
+add_dependencies(franka_panda_controller_swc
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
   ${PROJECT_NAME}_generate_messages_cpp
@@ -67,23 +67,22 @@ add_dependencies(${PROJECT_NAME}
   ${PROJECT_NAME}_gencfg
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(franka_panda_controller_swc PUBLIC
   ${Franka_LIBRARIES}
   ${catkin_LIBRARIES}
 )
 
-target_include_directories(f${PROJECT_NAME} SYSTEM PUBLIC
+target_include_directories(franka_panda_controller_swc SYSTEM PUBLIC
   ${Franka_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(franka_panda_controller_swc PUBLIC
   include
-  ${catkin_INCLUDE_DIRS}
 )
 
 ## Installation
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS franka_panda_controller_swc
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -94,13 +93,13 @@ install(DIRECTORY launch
 install(DIRECTORY config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
-install(FILES franka_panda_controller_plugin.xml
+install(FILES franka_panda_controller_swc_plugin.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
-#catkin_install_python(
-#  PROGRAMS scripts/interactive_marker.py scripts/move_to_start.py scripts/dual_arm_interactive_marker.py
-#  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-#)
+catkin_install_python(
+  PROGRAMS scripts/interactive_marker.py scripts/move_to_start.py scripts/dual_arm_interactive_marker.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Tools
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/ClangTools.cmake OPTIONAL
@@ -112,9 +111,9 @@ if(CLANG_TOOLS)
     ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
   )
-  add_format_target(${PROJECT_NAME} FILES ${SOURCES} ${HEADERS})
-  add_tidy_target(${PROJECT_NAME}
+  add_format_target(franka_panda_controller_swc FILES ${SOURCES} ${HEADERS})
+  add_tidy_target(franka_panda_controller_swc
     FILES ${SOURCES}
-    DEPENDS ${PROJECT_NAME}
+    DEPENDS franka_panda_controller_swc
   )
 endif()
