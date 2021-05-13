@@ -12,7 +12,7 @@ catkin_create_pkg file_name
 
 #### `package.xml`
 
-#### `file_name.plugin.xml`
+#### `file_name_plugin.xml`
 
 #### `config/file_name.yaml`
 
@@ -20,6 +20,6 @@ catkin_create_pkg file_name
 
 #### `launch/file_name.launch`
 
-#### `src/file_name.launch`
+#### `src/file_name.cpp`
 
 We can copy `cfg`, `msg` and `scripts` files from franka_example_controllers
