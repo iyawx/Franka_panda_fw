@@ -1,5 +1,5 @@
 # Building New Controller
-To understand all the essential files of the controllers, we can start with writing a new controller by copying one of the example controllers into a new file.  
+
 Make sure you installed `franka_ros` and `libfranka` in you workspace before you build your controllers. For setput instruction, please refer to `SETUP.md`.
 ---
 
@@ -24,11 +24,25 @@ URL: http://wiki.ros.org/pluginlib/Tutorials/Writing%20and%20Using%20a%20Simple%
 **In the first line: `<library path="lib/libfile_name">`, the file_name must be exactly the same as your filename. Do not name it ramdomly**
 
 #### `config/file_name.yaml`
+YMAL files determines the name of the joint as well as the parameters of the controller. 
+URL: http://wiki.ros.org/rosparam
 
 #### `include/file_name.h`
+Inside the include folder, we need to build a .h file which declares/sets the parameters regarding hardware.
+
 
 #### `launch/file_name.launch`
+The lauch file 
 
 #### `src/file_name.cpp`
+C++ file contain the code of your controller. 
 
 We can copy `cfg`, `msg` and `scripts` files from franka_example_controllers
+
+---
+# Example
+To understand all the essential files of the controllers, we can start with writing a new controller by copying one of the example controllers into a new file.  
+
+
+
+
