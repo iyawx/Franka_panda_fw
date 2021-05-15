@@ -15,5 +15,5 @@ source ~/catkin_ws/devel/setup.bash
 
 ## joint impedance controller
 ```
-roslaunch franka_panda_controller_swc joint_impedence_controller.launch robot_ip:=172.16.0.2 load_gripper:=true
+roslaunch franka_panda_controller_swc joint_impedance_controller.launch robot_ip:=172.16.0.2 load_gripper:=true
 ```
