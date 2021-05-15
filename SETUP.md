@@ -303,4 +303,11 @@ source /opt/ros/melodic/setup.sh
 source ~/catkin_ws/devel/setup.bash
 source ~/ws_moveit/devel/setup.bash
 ```
-
+To compile the file after modified the code:
+```
+cd catkin_ws 
+source /opt/ros/melodic/setup.sh 
+rosdep install --from-paths src --ignore-src --rosdistro melodic -y --skip-keys libfranka 
+catkin_make -DCMAKE_BUILD_TYPE=Release -DFranka_DIR:PATH=/opt/ros/melodic/lib/libfranka/build 
+source devel/setup.sh 
+```
