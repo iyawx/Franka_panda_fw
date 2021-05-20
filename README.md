@@ -9,6 +9,7 @@ please refer to `Setup` > `NEWCONTROLLER.md`**
 ## To source directories:
 ```
 source /opt/ros/melodic/setup.sh
+source ~/catkin_ws/devel/setup.bash
 source ~/ws_moveit/devel/setup.bash
 source ~/catkin_ws/devel/setup.bash
 ```
