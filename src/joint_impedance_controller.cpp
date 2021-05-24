@@ -1,7 +1,7 @@
 #include <franka_panda_controller.h>
 #include <cmath>
 #include <memory>
-
+#include <iostream>
 #include <controller_interface/controller_base.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
@@ -130,29 +130,43 @@ void JointImpedanceController::starting(const ros::Time& /*time*/) {
 
 void JointImpedanceController::update(const ros::Time& /*time*/,
                                              const ros::Duration& period) {
-  if (vel_current_ < vel_max_) {
-    vel_current_ += period.toSec() * std::fabs(vel_max_ / acceleration_time_);
-  }
-  vel_current_ = std::fmin(vel_current_, vel_max_);
-
-  angle_ += period.toSec() * vel_current_ / std::fabs(radius_);
-  if (angle_ > 2 * M_PI) {
-    angle_ -= 2 * M_PI;
-  }
-
-  //double delta_y = radius_ * (1 - std::cos(angle_));
-  double delta_y = radius_ * 0;
-  double delta_z = radius_ * std::sin(angle_);
-
+  
+  accu_time_ += period.toSec();
+  double end_value = 0.1;
+  double T = 10;
+  double a_3 = 10/pow(T,3);
+  double a_4 = -15/pow(T,4);
+  double a_5 = 6/pow(T,5);
   std::array<double, 16> pose_desired = initial_pose_;
-  pose_desired[13] += delta_y;
-  pose_desired[14] += delta_z;
+  
+  if (accu_time_ <= T) {
+    double s = a_3*pow(accu_time_,3) + a_4*pow(accu_time_,4) + a_5*pow(accu_time_,5);
+    pose_desired[13] = initial_pose_[13] + s * (end_value-initial_pose_[13]);
+  } else if (accu_time_ <= (T+5)) {
+    pose_desired[13] = initial_pose_[13] + (end_value-initial_pose_[13]);
+  } else {
+    if (vel_current_ < vel_max_) {
+      vel_current_ += period.toSec() * std::fabs(vel_max_ / acceleration_time_);
+    }
+    vel_current_ = std::fmin(vel_current_, vel_max_);
+    angle_ += period.toSec() *0.5* vel_current_ / std::fabs(radius_);
+    if (angle_ > 2 * M_PI) {
+      angle_ -= 2 * M_PI;
+    }
+    pose_desired[13] = initial_pose_[13] + (end_value-initial_pose_[13]);
+    pose_desired[14] += radius_ * std::sin(angle_);
+  }
+  // X_start*(expo(logse(inv(X_start)*X_end)s))
   cartesian_pose_handle_->setCommand(pose_desired);
 
   franka::RobotState robot_state = cartesian_pose_handle_->getRobotState();
   std::array<double, 7> coriolis = model_handle_->getCoriolis();
   std::array<double, 7> gravity = model_handle_->getGravity();
-
+  
+  //std::cout << "  x: "<< robot_state.O_T_EE[12];
+  //std::cout << "  y: "<< robot_state.O_T_EE[13] << "\n";
+  //std::cout << "  z: "<< robot_state.O_T_EE[14] << "\n";
+  
   double alpha = 0.99;
   for (size_t i = 0; i < 7; i++) {
     dq_filtered_[i] = (1 - alpha) * dq_filtered_[i] + alpha * robot_state.dq[i];
