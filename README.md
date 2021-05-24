@@ -6,6 +6,15 @@ please refer to `Setup` > `SETUP.md`**
 **For more information of the prerequisites of controller setup,  
 please refer to `Setup` > `NEWCONTROLLER.md`**
 ---
+## To compile the file after modified the code:
+```
+cd catkin_ws 
+source /opt/ros/melodic/setup.sh 
+rosdep install --from-paths src --ignore-src --rosdistro melodic -y --skip-keys libfranka 
+catkin_make -DCMAKE_BUILD_TYPE=Release -DFranka_DIR:PATH=/opt/ros/melodic/lib/libfranka/build 
+source devel/setup.sh 
+```
+
 ## To source directories:
 ```
 source /opt/ros/melodic/setup.sh
