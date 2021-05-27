@@ -11,4 +11,5 @@ roslaunch franka_example_controllers force_example_controller.launch robot_ip:=1
 ### Open another terminal and run:
 ```
 rostopic echo /franka_state_controller/franka_states/O_T_EE
+rostopic echo /franka_state_controller/franka_states/elbow
 ```
