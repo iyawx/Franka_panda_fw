@@ -2,10 +2,12 @@
 #include <cmath>
 #include <memory>
 #include <iostream>
+#include <array>
 #include <controller_interface/controller_base.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
-
+#include <unsupported/Eigen/MatrixFunctions>
+#include <pseudo_inversion.h>
 #include <franka/robot_state.h>
 
 namespace franka_panda_controller_swc {
@@ -126,19 +128,57 @@ bool JointImpedanceController::init(hardware_interface::RobotHW* robot_hw,
 
 void JointImpedanceController::starting(const ros::Time& /*time*/) {
   initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_d;
+  initial_elbow_ = cartesian_pose_handle_->getRobotState().elbow_d;
+  end_pose_ = {0.07865456760496276, 0.996548277784614, -0.026186560304940605, 0.0,
+   -0.9952557421534225, 0.08000287893280794, 0.05519324210726446, 0.0,
+    0.05709882991049958, 0.02172154212507249, 0.9981322047857992, 0.0,
+    0.11412745299982975, 0.5179347642095794, 0.5428441219391879, 1.0};
+  end_elbow_ = {1.8011111500909278, -1.0};
 }
 
 void JointImpedanceController::update(const ros::Time& /*time*/,
                                              const ros::Duration& period) {
   
   accu_time_ += period.toSec();
-  double end_value = 0.1;
-  double T = 10;
+  Eigen::Map<Eigen::Matrix<double, 4, 4>> init_com(initial_pose_.data());
+  Eigen::Map<Eigen::Matrix<double, 4, 4>> end_com(end_pose_.data());
+  Eigen::Matrix<double, 4, 4> pose_desired;
+  double T = 30;
   double a_3 = 10/pow(T,3);
   double a_4 = -15/pow(T,4);
   double a_5 = 6/pow(T,5);
-  std::array<double, 16> pose_desired = initial_pose_;
-  
+  double s = a_3*pow(accu_time_,3) + a_4*pow(accu_time_,4) + a_5*pow(accu_time_,5);
+  std::array<double, 16> command_mat_pose = initial_pose_;
+  std::array<double, 2> command_mat_elbow = initial_elbow_;
+
+  // X_start*(exp(log(inv(X_start)*X_end)s))
+  if (accu_time_ <= T) {
+    // pose
+    Eigen::MatrixXd initial_pose_pinv_;
+    pseudoInverse(init_com, initial_pose_pinv_);
+    inv_init_end_ = initial_pose_pinv_ * end_com;
+    log_init_end_s_ = inv_init_end_.log() * s;
+    pose_desired = init_com * log_init_end_s_.exp();
+    // elbow
+    command_mat_elbow[0] = initial_elbow_[0] + s * (end_elbow_[0] - initial_elbow_[0]);
+  } else {
+    pose_desired = end_com;
+    command_mat_elbow[0] = initial_elbow_[0] + s * (end_elbow_[0] - initial_elbow_[0]);;
+  }
+  command_mat_pose[0] = pose_desired.data()[0];
+  command_mat_pose[1] = pose_desired.data()[1];
+  command_mat_pose[2] = pose_desired.data()[2];
+  command_mat_pose[4] = pose_desired.data()[4];
+  command_mat_pose[5] = pose_desired.data()[5];
+  command_mat_pose[6] = pose_desired.data()[6];
+  command_mat_pose[8] = pose_desired.data()[8];
+  command_mat_pose[9] = pose_desired.data()[9];
+  command_mat_pose[10] = pose_desired.data()[10];
+  command_mat_pose[12] = pose_desired.data()[12];
+  command_mat_pose[13] = pose_desired.data()[13];
+  command_mat_pose[14] = pose_desired.data()[14];
+
+  /*
   if (accu_time_ <= T) {
     double s = a_3*pow(accu_time_,3) + a_4*pow(accu_time_,4) + a_5*pow(accu_time_,5);
     pose_desired[13] = initial_pose_[13] + s * (end_value-initial_pose_[13]);
@@ -155,17 +195,17 @@ void JointImpedanceController::update(const ros::Time& /*time*/,
     }
     pose_desired[13] = initial_pose_[13] + (end_value-initial_pose_[13]);
     pose_desired[14] += radius_ * std::sin(angle_);
-  }
-  // X_start*(expo(logse(inv(X_start)*X_end)s))
-  cartesian_pose_handle_->setCommand(pose_desired);
+  }*/
+  cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
 
   franka::RobotState robot_state = cartesian_pose_handle_->getRobotState();
   std::array<double, 7> coriolis = model_handle_->getCoriolis();
   std::array<double, 7> gravity = model_handle_->getGravity();
   
-  //std::cout << "  x: "<< robot_state.O_T_EE[12];
-  //std::cout << "  y: "<< robot_state.O_T_EE[13] << "\n";
-  //std::cout << "  z: "<< robot_state.O_T_EE[14] << "\n";
+  /*
+  std::cout << "  x: "<< robot_state.O_T_EE[12];
+  std::cout << "  y: "<< robot_state.O_T_EE[13] << "\n";
+  std::cout << "  z: "<< robot_state.O_T_EE[14] << "\n";*/
   
   double alpha = 0.99;
   for (size_t i = 0; i < 7; i++) {
