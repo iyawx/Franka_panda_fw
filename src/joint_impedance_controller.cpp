@@ -138,10 +138,15 @@ void JointImpedanceController::starting(const ros::Time& /*time*/) {
                1.0, 0.0, 0.0, 0.0,
                0.0, 1.0, 0.0, 0.0,
                -0.328405, 0.549474, 0.785429, 1.0};*/
+  /*
   end_pose_ = {0.0, 1.0, 0.0, 0.0,
                0.0, 0.0, 1.0, 0.0,
                1.0, 0.0, 0.0, 0.0,
-               0.012693, 0.536757, 0.410588, 1.0};
+               0.012693, 0.536757, 0.410588, 1.0};*/
+  end_pose_ = {0.0, 1.0, 0.0, 0.0,
+               -1.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 1.0, 0.0,
+               -0.106664, 0.505892, 0.663967, 1.0};
   end_elbow_ = {1.54, -1.0};
 }
 
@@ -210,7 +215,7 @@ void JointImpedanceController::update(const ros::Time& /*time*/,
     cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
   } else {
     command_mat_pose[14] += radius_ * std::sin(angle_);
-    command_mat_elbow[0] -= radius_ *3* std::sin(angle_);
+    command_mat_elbow[0] -= radius_ *2* std::sin(angle_);
   //  cartesian_pose_handle_->setCommand(command_mat_pose);
     cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
   }
