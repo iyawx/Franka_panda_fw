@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include <array>
 #include <controller_interface/multi_interface_controller.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/robot_hw.h>
@@ -14,6 +14,8 @@
 #include <franka_hw/franka_cartesian_command_interface.h>
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/trigger_rate.h>
+#include <unsupported/Eigen/MatrixFunctions>
+#include <Eigen/Core>
 
 namespace franka_panda_controller_swc {
 
@@ -46,8 +48,14 @@ class JointImpedanceController : public controller_interface::MultiInterfaceCont
   std::vector<double> k_gains_;
   std::vector<double> d_gains_;
   double coriolis_factor_{1.0};
+  double accu_time_{0.0};
   std::array<double, 7> dq_filtered_;
   std::array<double, 16> initial_pose_;
+  std::array<double, 16> end_pose_;
+  std::array<double, 2> initial_elbow_;
+  std::array<double, 2> end_elbow_;
+  Eigen::Matrix<double, 4, 4> inv_init_end_;
+  Eigen::Matrix<double, 4, 4> log_init_end_s_;
 
   franka_hw::TriggerRate rate_trigger_{1.0};
   std::array<double, 7> last_tau_d_{};

@@ -129,11 +129,20 @@ bool JointImpedanceController::init(hardware_interface::RobotHW* robot_hw,
 void JointImpedanceController::starting(const ros::Time& /*time*/) {
   initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_d;
   initial_elbow_ = cartesian_pose_handle_->getRobotState().elbow_d;
-  end_pose_ = {0.07865456760496276, 0.996548277784614, -0.026186560304940605, 0.0,
-   -0.9952557421534225, 0.08000287893280794, 0.05519324210726446, 0.0,
-    0.05709882991049958, 0.02172154212507249, 0.9981322047857992, 0.0,
-    0.11412745299982975, 0.5179347642095794, 0.5428441219391879, 1.0};
-  end_elbow_ = {1.8011111500909278, -1.0};
+  /*end_pose_ = {1.0, 0.0, 0.0, 0.0,
+    0.0, -1.0, 0.0, 0.0,
+    0.0, 0.0, -1.0, 0.0,
+    -0.072078, 0.537113, 0.547998, 1.0};*/
+  /*
+  end_pose_ = {0.0, 0.0, 1.0, 0.0,
+               1.0, 0.0, 0.0, 0.0,
+               0.0, 1.0, 0.0, 0.0,
+               -0.328405, 0.549474, 0.785429, 1.0};*/
+  end_pose_ = {0.0, 1.0, 0.0, 0.0,
+               0.0, 0.0, 1.0, 0.0,
+               1.0, 0.0, 0.0, 0.0,
+               0.012693, 0.536757, 0.410588, 1.0};
+  end_elbow_ = {1.54, -1.0};
 }
 
 void JointImpedanceController::update(const ros::Time& /*time*/,
@@ -143,7 +152,8 @@ void JointImpedanceController::update(const ros::Time& /*time*/,
   Eigen::Map<Eigen::Matrix<double, 4, 4>> init_com(initial_pose_.data());
   Eigen::Map<Eigen::Matrix<double, 4, 4>> end_com(end_pose_.data());
   Eigen::Matrix<double, 4, 4> pose_desired;
-  double T = 30;
+  Eigen::Matrix<double, 4, 4> pervision_pose;
+  double T = 10;
   double a_3 = 10/pow(T,3);
   double a_4 = -15/pow(T,4);
   double a_5 = 6/pow(T,5);
@@ -151,20 +161,37 @@ void JointImpedanceController::update(const ros::Time& /*time*/,
   std::array<double, 16> command_mat_pose = initial_pose_;
   std::array<double, 2> command_mat_elbow = initial_elbow_;
 
-  // X_start*(exp(log(inv(X_start)*X_end)s))
   if (accu_time_ <= T) {
+    // X_start*(exp(log(inv(X_start)*X_end)s))
     // pose
+    /*
     Eigen::MatrixXd initial_pose_pinv_;
-    pseudoInverse(init_com, initial_pose_pinv_);
+    pseudoInverse(init_com, initial_pose_pinv_);*/
+    Eigen::Matrix<double, 4, 4> initial_pose_pinv_ = init_com.inverse();
     inv_init_end_ = initial_pose_pinv_ * end_com;
     log_init_end_s_ = inv_init_end_.log() * s;
     pose_desired = init_com * log_init_end_s_.exp();
     // elbow
     command_mat_elbow[0] = initial_elbow_[0] + s * (end_elbow_[0] - initial_elbow_[0]);
-  } else {
+
+  } else if (accu_time_ <= (T+5)){
+    // stop
     pose_desired = end_com;
-    command_mat_elbow[0] = initial_elbow_[0] + s * (end_elbow_[0] - initial_elbow_[0]);;
+    command_mat_elbow = end_elbow_;
+  } else {
+    // sin-motion
+    if (vel_current_ <= vel_max_) {
+      vel_current_ += period.toSec() * std::fabs(vel_max_ / acceleration_time_);
+    }
+    vel_current_ = std::fmin(vel_current_, vel_max_);
+    angle_ += period.toSec() *0.5* vel_current_ / std::fabs(radius_);
+    if (angle_ > 2 * M_PI) {
+      angle_ -= 2 * M_PI;
+    }
+    pose_desired = end_com;
+    command_mat_elbow = end_elbow_;
   }
+  
   command_mat_pose[0] = pose_desired.data()[0];
   command_mat_pose[1] = pose_desired.data()[1];
   command_mat_pose[2] = pose_desired.data()[2];
@@ -178,30 +205,20 @@ void JointImpedanceController::update(const ros::Time& /*time*/,
   command_mat_pose[13] = pose_desired.data()[13];
   command_mat_pose[14] = pose_desired.data()[14];
 
-  /*
-  if (accu_time_ <= T) {
-    double s = a_3*pow(accu_time_,3) + a_4*pow(accu_time_,4) + a_5*pow(accu_time_,5);
-    pose_desired[13] = initial_pose_[13] + s * (end_value-initial_pose_[13]);
-  } else if (accu_time_ <= (T+5)) {
-    pose_desired[13] = initial_pose_[13] + (end_value-initial_pose_[13]);
+  if (accu_time_ <= T+5){
+  //  cartesian_pose_handle_->setCommand(command_mat_pose);
+    cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
   } else {
-    if (vel_current_ < vel_max_) {
-      vel_current_ += period.toSec() * std::fabs(vel_max_ / acceleration_time_);
-    }
-    vel_current_ = std::fmin(vel_current_, vel_max_);
-    angle_ += period.toSec() *0.5* vel_current_ / std::fabs(radius_);
-    if (angle_ > 2 * M_PI) {
-      angle_ -= 2 * M_PI;
-    }
-    pose_desired[13] = initial_pose_[13] + (end_value-initial_pose_[13]);
-    pose_desired[14] += radius_ * std::sin(angle_);
-  }*/
-  cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
+    command_mat_pose[14] += radius_ * std::sin(angle_);
+    command_mat_elbow[0] -= radius_ *3* std::sin(angle_);
+  //  cartesian_pose_handle_->setCommand(command_mat_pose);
+    cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
+  }
 
   franka::RobotState robot_state = cartesian_pose_handle_->getRobotState();
   std::array<double, 7> coriolis = model_handle_->getCoriolis();
   std::array<double, 7> gravity = model_handle_->getGravity();
-  
+
   /*
   std::cout << "  x: "<< robot_state.O_T_EE[12];
   std::cout << "  y: "<< robot_state.O_T_EE[13] << "\n";
