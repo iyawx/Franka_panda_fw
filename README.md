@@ -1,6 +1,6 @@
-**This page is for NeuroRehack 2021 project 2 Setup**  
+# **This page is for NeuroRehack 2021 project 2 Setup**  
 
-# Connecting ROS and Unity
+## Connecting ROS and Unity
 URL:http://wiki.ros.org/rosbridge_suite  
 
 ---
