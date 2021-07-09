@@ -16,6 +16,11 @@ source devel/setup.sh
 ```
 
 ## To source directories:
+Open the bashrc file:
+```
+gedit .bashrc
+```
+Source the commands: 
 ```
 source /opt/ros/melodic/setup.sh
 source ~/catkin_ws/devel/setup.bash
