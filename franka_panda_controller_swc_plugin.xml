@@ -4,4 +4,9 @@
       A controller that tracks a cartesian path with a joint impedance controller that compensates coriolis torques. The torque commands are compared to measured torques in Console outputs.
     </description>
   </class>
+  <class name="franka_panda_controller_swc/ForceControllerNR" type="franka_panda_controller_swc::ForceControllerNR" base_class_type="controller_interface::ControllerBase">
+    <description>
+      A PI controller that applies a force corresponding to a user-provided desired mass in the z axis. The desired mass value can be modified online with dynamic reconfigure.
+    </description>
+  </class>
 </library>

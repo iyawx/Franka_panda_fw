@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.4)
 project(franka_panda_controller_swc)
 
 set(CMAKE_BUILD_TYPE Release)
@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   franka_hw
   geometry_msgs
   hardware_interface
+  std_msgs
   tf
   tf_conversions
   message_generation
@@ -22,13 +23,15 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
-find_package(Franka 0.5.0 REQUIRED)
+find_package(Franka 0.7.0 REQUIRED)
 
 add_message_files(FILES
   JointTorqueComparison.msg
+  UnityInput.msg
+  Vector3.msg
 )
 
-generate_messages()
+generate_messages(DEPENDENCIES std_msgs)
 
 generate_dynamic_reconfigure_options(
   cfg/compliance_param.cfg
@@ -45,6 +48,7 @@ catkin_package(
     eigen_conversions
     franka_hw
     geometry_msgs
+    std_msgs
     hardware_interface
     tf
     tf_conversions
@@ -57,6 +61,7 @@ catkin_package(
 
 add_library(franka_panda_controller_swc
   src/joint_impedance_controller.cpp
+  src/force_controller_NR.cpp
 )
 
 add_dependencies(franka_panda_controller_swc
@@ -79,6 +84,7 @@ target_include_directories(franka_panda_controller_swc SYSTEM PUBLIC
 )
 target_include_directories(franka_panda_controller_swc PUBLIC
   include
+  ${catkin_INCLUDE_DIRS}
 )
 
 ## Installation
