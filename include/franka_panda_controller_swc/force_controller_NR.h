@@ -47,6 +47,12 @@ class ForceControllerNR : public controller_interface::MultiInterfaceController<
   double target_mass_{0.0};
   double k_p_{0.0};
   double k_i_{0.0};
+
+  double F_K_{1.0};
+  double x_pre_{0.0};
+  double y_pre_{0.0};
+  double z_pre_{0.0};
+
   double target_k_p_{0.0};
   double target_k_i_{0.0};
   double filter_gain_{0.001};

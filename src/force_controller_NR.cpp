@@ -101,6 +101,9 @@ void ForceControllerNR::starting(const ros::Time& /*time*/) {
   // Bias correction for the current external torque
   tau_ext_initial_ = tau_measured - gravity;
   tau_error_.setZero();
+  x_pre_ = robot_state.O_T_EE[12];
+  y_pre_ = robot_state.O_T_EE[13];
+  z_pre_ = robot_state.O_T_EE[14];
 }
 
 void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& period) {
@@ -115,7 +118,44 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
   Eigen::Map<Eigen::Matrix<double, 7, 1>> gravity(gravity_array.data());
 
   Eigen::VectorXd tau_d(7), desired_force_torque(6), tau_cmd(7), tau_ext(7);
+  Eigen::Matrix<double, 3,1> end_vel;
+  Eigen::Matrix<double, 3,1> force_input;
+  Eigen::Matrix<double, 3,3> force_const;
   desired_force_torque.setZero();
+  force_const.setZero();
+  //
+  end_vel(0) = (robot_state.O_T_EE[12] - x_pre_) / period.toSec();
+  end_vel(1) = (robot_state.O_T_EE[13] - y_pre_) / period.toSec();
+  end_vel(2) = (robot_state.O_T_EE[14] - z_pre_) / period.toSec();
+  force_const(0,1) = -F_K_;
+  force_const(0,2) = F_K_;
+  force_const(1,0) = F_K_;
+  force_const(1,2) = -F_K_;
+  force_const(2,0) = -F_K_;
+  force_const(2,1) = F_K_;
+  force_input = force_const * end_vel;
+  if (isnan(force_input(0))) {
+    force_input(0) = 0.0;
+  }
+  if (isnan(force_input(1))) {
+    force_input(1) = 0.0;
+  }
+  if (isnan(force_input(2))) {
+    force_input(2) = 0.0;
+  }
+  /*
+  if (force_input(0) < 0.0001 || force_input(0) > -0.0001) {
+    force_input(0) = 0.0;
+  }
+  if (force_input(1) < 0.0001 || force_input(1) > -0.0001) {
+    force_input(1) = 0.0;
+  }
+  if (force_input(2) < 0.0001 || force_input(2) > -0.0001) {
+    force_input(2) = 0.0;
+  }*/
+  desired_force_torque(0) = 25 * force_input(0);
+  desired_force_torque(1) = 50 * force_input(1);
+  desired_force_torque(2) = 50 * force_input(2);
   desired_force_torque(2) = desired_mass_ * -9.81;
   tau_ext = tau_measured - gravity - tau_ext_initial_;
   tau_d << jacobian.transpose() * desired_force_torque;
@@ -123,19 +163,29 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
   // FF + PI control (PI gains are initially all 0)
   tau_cmd = tau_d + k_p_ * (tau_d - tau_ext) + k_i_ * tau_error_;
   tau_cmd << saturateTorqueRate(tau_cmd, tau_J_d);
+  /*
+  std::cout << "  x: "<< force_input(0);*/
+  std::cout << "  y: "<< force_input(1);
+  /*std::cout << "  z: "<< force_input(2) << "\n";*/
+
+  x_pre_ = robot_state.O_T_EE[12];
+  y_pre_ = robot_state.O_T_EE[13];
+  z_pre_ = robot_state.O_T_EE[14];
 
   for (size_t i = 0; i < 7; ++i) {
     joint_handles_[i].setCommand(tau_cmd(i));
   }
 
   if (rate_trigger_() && unity_publisher_.trylock()) {
-    std::array<double, 16> uni_input = robot_state.O_T_EE;
-    unity_publisher_.msg_.linear.x = uni_input[12];
-    unity_publisher_.msg_.linear.y = uni_input[13];
-    unity_publisher_.msg_.linear.z = uni_input[14];
-    unity_publisher_.msg_.angular.x = uni_input[1];
-    unity_publisher_.msg_.angular.y = uni_input[2];
-    unity_publisher_.msg_.angular.z = uni_input[3];
+    std::array<double, 16> uni_input_p = robot_state.O_T_EE;
+    //std::array<double, 6> uni_input_f = robot_state.O_F_ext_hat_K;
+    std::array<double, 6> uni_input_f = robot_state.K_F_ext_hat_K;
+    unity_publisher_.msg_.linear.x = uni_input_p[12];
+    unity_publisher_.msg_.linear.y = uni_input_p[13];
+    unity_publisher_.msg_.linear.z = uni_input_p[14];
+    unity_publisher_.msg_.angular.x = uni_input_f[0];
+    unity_publisher_.msg_.angular.y = uni_input_f[1];
+    unity_publisher_.msg_.angular.z = uni_input_f[2];
     unity_publisher_.unlockAndPublish();
   }
 
