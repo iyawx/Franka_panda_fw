@@ -74,6 +74,6 @@ roslaunch franka_panda_controller_swc force_controller_NR.launch robot_ip:=172.1
 ## Receive the messages from ROS
 #### Add new message types
 URL:https://github.com/siemens/ros-sharp/wiki/Dev_NewMessageTypes  
-**Try to use **method 1**, which is the easiest method.**  
-**Make sure the PACKAGE name is same as the package name in ROS**  
+> **Try to use **method 1**, which is the easiest method.**  
+> **Make sure the PACKAGE name is same as the package name in ROS**  
 
