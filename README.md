@@ -71,7 +71,7 @@ roslaunch franka_panda_controller_swc joint_impedance_controller.launch robot_ip
 roslaunch franka_panda_controller_swc force_controller_NR.launch robot_ip:=172.16.0.2 load_gripper:=true
 ```
 
-## Receive the messages from ROS
+## Receive the messages from ROS in Unity
 #### Add new message types
 URL:https://github.com/siemens/ros-sharp/wiki/Dev_NewMessageTypes  
 > **Try to use **method 1**, which is the easiest method.**  
