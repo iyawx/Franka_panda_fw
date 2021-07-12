@@ -16,8 +16,8 @@ roslaunch rosbridge_server rosbridge_websocket.launch
 ### Testing the setting by publishing a simple topic:
 > IP setup
 The IP of two computer need to be set as same LAN, e.g.:  
-Computer1 (ROS): 192.168.0.1  
-Computer2 (Unity): 192.168.0.2  
+  Computer1 (ROS): 192.168.0.1  
+  Computer2 (Unity): 192.168.0.2  
 
 > **ROS**
 1. Checking IP to ensure the IP was set correctly:
