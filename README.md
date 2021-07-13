@@ -61,14 +61,16 @@ source ~/ws_moveit/devel/setup.bash
 source ~/catkin_ws/devel/setup.bash
 ```
 
-#### joint impedance controller
-```
-roslaunch franka_panda_controller_swc joint_impedance_controller.launch robot_ip:=172.16.0.2 load_gripper:=true
-```
-#### froce controller
+#### Free motion + force field (froce controller)
 ```
 roslaunch franka_panda_controller_swc force_controller_NR.launch robot_ip:=172.16.0.2 load_gripper:=true
 ```
+
+#### Isometric motion + force field (Cartesian impedance controller)
+```
+roslaunch franka_panda_controller_swc cartesian_impedance_controller.launch robot_ip:=172.16.0.2 load_gripper:=true
+```
+
 
 ## Receive the messages from ROS in Unity
 #### Add new message types
