@@ -68,7 +68,7 @@ roslaunch franka_panda_controller_swc force_controller_NR.launch robot_ip:=172.1
 
 #### Isometric motion + force field (Cartesian impedance controller)
 ```
-roslaunch franka_panda_controller_swc cartesian_impedance_controller.launch robot_ip:=172.16.0.2 load_gripper:=true
+roslaunch franka_panda_controller_swc cartesian_impedance_controller_NR.launch robot_ip:=172.16.0.2 load_gripper:=true
 ```
 
 
