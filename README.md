@@ -14,7 +14,7 @@ source /opt/ros/melodic/setup.bash
 roslaunch rosbridge_server rosbridge_websocket.launch
 ```
 ### Testing the setting by publishing a simple topic:
-> IP setup  
+> IP setup   
 The IP of two computer need to be set as same LAN, e.g.:  
 1. Computer1 (ROS): 192.168.0.1  
 2. Computer2 (Unity): 192.168.0.2  
