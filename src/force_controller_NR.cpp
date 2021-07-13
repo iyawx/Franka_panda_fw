@@ -118,12 +118,13 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
   Eigen::Map<Eigen::Matrix<double, 7, 1>> gravity(gravity_array.data());
 
   Eigen::VectorXd tau_d(7), desired_force_torque(6), tau_cmd(7), tau_ext(7);
+  desired_force_torque.setZero();
+  
+  //******************* Force field, Editor: Shih-Wen Chen *********************
   Eigen::Matrix<double, 3,1> end_vel;
   Eigen::Matrix<double, 3,1> force_input;
   Eigen::Matrix<double, 3,3> force_const;
-  desired_force_torque.setZero();
   force_const.setZero();
-  //
   end_vel(0) = (robot_state.O_T_EE[12] - x_pre_) / period.toSec();
   end_vel(1) = (robot_state.O_T_EE[13] - y_pre_) / period.toSec();
   end_vel(2) = (robot_state.O_T_EE[14] - z_pre_) / period.toSec();
@@ -143,31 +144,19 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
   if (isnan(force_input(2))) {
     force_input(2) = 0.0;
   }
-  /*
-  if (force_input(0) < 0.0001 || force_input(0) > -0.0001) {
-    force_input(0) = 0.0;
-  }
-  if (force_input(1) < 0.0001 || force_input(1) > -0.0001) {
-    force_input(1) = 0.0;
-  }
-  if (force_input(2) < 0.0001 || force_input(2) > -0.0001) {
-    force_input(2) = 0.0;
-  }*/
-  desired_force_torque(0) = 25 * force_input(0);
-  desired_force_torque(1) = 50 * force_input(1);
-  desired_force_torque(2) = 50 * force_input(2);
-  desired_force_torque(2) = desired_mass_ * -9.81;
+  desired_force_torque(0) = 20 * force_input(0);
+  desired_force_torque(1) = 40 * force_input(1);
+  desired_force_torque(2) = 40 * force_input(2) + desired_mass_ * -9.81;
+  //******************* Force field, Editor: Shih-Wen Chen *********************
+
   tau_ext = tau_measured - gravity - tau_ext_initial_;
   tau_d << jacobian.transpose() * desired_force_torque;
   tau_error_ = tau_error_ + period.toSec() * (tau_d - tau_ext);
   // FF + PI control (PI gains are initially all 0)
   tau_cmd = tau_d + k_p_ * (tau_d - tau_ext) + k_i_ * tau_error_;
   tau_cmd << saturateTorqueRate(tau_cmd, tau_J_d);
-  /*
-  std::cout << "  x: "<< force_input(0);*/
-  std::cout << "  y: "<< force_input(1);
-  /*std::cout << "  z: "<< force_input(2) << "\n";*/
-
+  
+  // Update the robot state for end-effector velocities
   x_pre_ = robot_state.O_T_EE[12];
   y_pre_ = robot_state.O_T_EE[13];
   z_pre_ = robot_state.O_T_EE[14];
@@ -188,6 +177,10 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
     unity_publisher_.msg_.angular.z = uni_input_f[2];
     unity_publisher_.unlockAndPublish();
   }
+
+  std::cout << "  x: "<< robot_state.K_F_ext_hat_K[0];
+  std::cout << "  y: "<< robot_state.K_F_ext_hat_K[1];
+  std::cout << "  z: "<< robot_state.K_F_ext_hat_K[2] << "\n";
 
   // Update signals changed online through dynamic reconfigure
   desired_mass_ = filter_gain_ * target_mass_ + (1 - filter_gain_) * desired_mass_;
