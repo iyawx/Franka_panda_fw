@@ -77,3 +77,26 @@ URL:https://github.com/siemens/ros-sharp/wiki/Dev_NewMessageTypes
 > **Try to use **method 1**, which is the easiest method.**  
 > **Make sure the PACKAGE name is same as the package name in ROS**  
 
+
+## Theory
+#### Free motion + force field  
+Parameters we got: p (position from end-effector) & dt (time segment: 0.001s)  
+Output parameters: Fp (force to Unity)  
+---
+1. v = [vx; vy; vz] = (p_current - p_previous) / dt  
+2. Fp = [0 -K K;  K 0 -K; -K K 0] * [vx; vy; vz]
+  = A * v  
+_(Let A = [0 -K K;  K 0 -K; -K K 0])_  
+
+#### Isometric training + force field  
+Parameters we got: Fs (force from sensor)  
+Output parameters: Fp (force to Unity)  
+---
+1. Initialize the initial Fs = 0   
+2. Fp = A * sum(Fs / m)   
+
+
+
+
+
+
