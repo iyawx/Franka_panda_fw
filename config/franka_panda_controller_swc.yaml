@@ -44,3 +44,15 @@ joint_impedance_controller_swc:
     publish_rate: 10.0
     coriolis_factor: 1.0
 
+cartesian_impedance_controller_NR:
+    type: franka_panda_controller_swc/CartesianImpedanceControllerNR
+    arm_id: panda
+    joint_names:
+        - panda_joint1
+        - panda_joint2
+        - panda_joint3
+        - panda_joint4
+        - panda_joint5
+        - panda_joint6
+        - panda_joint7
+

@@ -119,8 +119,8 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
 
   Eigen::VectorXd tau_d(7), desired_force_torque(6), tau_cmd(7), tau_ext(7);
   desired_force_torque.setZero();
-  
-  //******************* Force field, Editor: Shih-Wen Chen *********************
+
+  //************* Free motion + Force field, Editor: Shih-Wen Chen *************
   Eigen::Matrix<double, 3,1> end_vel;
   Eigen::Matrix<double, 3,1> force_input;
   Eigen::Matrix<double, 3,3> force_const;
@@ -135,6 +135,7 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
   force_const(2,0) = -F_K_;
   force_const(2,1) = F_K_;
   force_input = force_const * end_vel;
+  // Get rid of "Nan"
   if (isnan(force_input(0))) {
     force_input(0) = 0.0;
   }
@@ -144,10 +145,10 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
   if (isnan(force_input(2))) {
     force_input(2) = 0.0;
   }
-  desired_force_torque(0) = 20 * force_input(0);
-  desired_force_torque(1) = 40 * force_input(1);
-  desired_force_torque(2) = 40 * force_input(2) + desired_mass_ * -9.81;
-  //******************* Force field, Editor: Shih-Wen Chen *********************
+  desired_force_torque(0) = 30 * force_input(0);
+  desired_force_torque(1) = 50 * force_input(1);
+  desired_force_torque(2) = 50 * force_input(2) + desired_mass_ * -9.81;
+  //************* Free motion + force field, Editor: Shih-Wen Chen *************
 
   tau_ext = tau_measured - gravity - tau_ext_initial_;
   tau_d << jacobian.transpose() * desired_force_torque;
@@ -177,10 +178,10 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
     unity_publisher_.msg_.angular.z = uni_input_f[2];
     unity_publisher_.unlockAndPublish();
   }
-
+  /*
   std::cout << "  x: "<< robot_state.K_F_ext_hat_K[0];
   std::cout << "  y: "<< robot_state.K_F_ext_hat_K[1];
-  std::cout << "  z: "<< robot_state.K_F_ext_hat_K[2] << "\n";
+  std::cout << "  z: "<< robot_state.K_F_ext_hat_K[2] << "\n";*/
 
   // Update signals changed online through dynamic reconfigure
   desired_mass_ = filter_gain_ * target_mass_ + (1 - filter_gain_) * desired_mass_;

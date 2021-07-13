@@ -62,6 +62,7 @@ catkin_package(
 add_library(franka_panda_controller_swc
   src/joint_impedance_controller.cpp
   src/force_controller_NR.cpp
+  src/cartesian_impedance_controller_NR.cpp
 )
 
 add_dependencies(franka_panda_controller_swc
