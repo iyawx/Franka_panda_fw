@@ -83,17 +83,17 @@ URL:https://github.com/siemens/ros-sharp/wiki/Dev_NewMessageTypes
 > Output parameters: Fp (force to Unity)  
 1. v = [vx; vy; vz] = (p_current - p_previous) / dt  
 2. Fp = [0 -K K;  K 0 -K; -K K 0] * [vx; vy; vz]
-  = A * v  
-_(Let A = [0 -K K;  K 0 -K; -K K 0])_  
+   = A * v  
 
 #### Isometric training + force field  
 > Parameters we got: Fs (force from sensor)  
 > Output parameters: Fp (force to Unity)  
 1. Initialize the initial Fs = 0   
-2. Fp = A * sum(Fs / m)   
+2. Fp = [0 -K K;  K 0 -K; -K K 0] * sum(Fs / m) 
+   = A * sum(Fs / m)   
 
 
-
-
+_A = [0 -K K;  K 0 -K; -K K 0]   
+m = mass of the object_
 
 
