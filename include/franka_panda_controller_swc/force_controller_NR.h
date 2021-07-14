@@ -20,7 +20,7 @@
 #include <realtime_tools/realtime_publisher.h>
 #include <franka_panda_controller_swc/UnityInput.h>
 #include <franka_panda_controller_swc/desired_mass_paramConfig.h>
-//#include <geometry_msgs/Vector3.h>
+#include <geometry_msgs/Vector3.h>
 
 namespace franka_panda_controller_swc {
 
@@ -52,6 +52,7 @@ class ForceControllerNR : public controller_interface::MultiInterfaceController<
   double x_pre_{0.0};
   double y_pre_{0.0};
   double z_pre_{0.0};
+  Eigen::Vector3d unity_out_bool_;
 
   double target_k_p_{0.0};
   double target_k_i_{0.0};
@@ -66,6 +67,11 @@ class ForceControllerNR : public controller_interface::MultiInterfaceController<
   ros::NodeHandle dynamic_reconfigure_desired_mass_param_node_;
   void desiredMassParamCallback(franka_panda_controller_swc::desired_mass_paramConfig& config,
                                 uint32_t level);
+  // Subscribe from Unity
+  ros::Subscriber sub_unity_publisher_;
+  void Unity_publisher(const geometry_msgs::Vector3ConstPtr& msg);
+
+  // Publisher to Unity
   franka_hw::TriggerRate rate_trigger_{1.0};
   realtime_tools::RealtimePublisher<UnityInput> unity_publisher_;
 };

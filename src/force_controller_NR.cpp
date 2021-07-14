@@ -10,13 +10,18 @@
 #include <ros/ros.h>
 
 #include <franka/robot_state.h>
-
+#include <franka/robot.h>
 namespace franka_panda_controller_swc {
 
 bool ForceControllerNR::init(hardware_interface::RobotHW* robot_hw,
                                   ros::NodeHandle& node_handle) {
   std::vector<std::string> joint_names;
   std::string arm_id;
+
+  sub_unity_publisher_ = node_handle.subscribe(
+      "/unity_output", 20, &ForceControllerNR::Unity_publisher, this,
+      ros::TransportHints().reliable().tcpNoDelay());
+
   ROS_WARN(
       "ForceControllerNR: Make sure your robot's endeffector is in contact "
       "with a horizontal surface before starting the controller!");
@@ -90,6 +95,8 @@ bool ForceControllerNR::init(hardware_interface::RobotHW* robot_hw,
   dynamic_server_desired_mass_param_->setCallback(
       boost::bind(&ForceControllerNR::desiredMassParamCallback, this, _1, _2));
 
+  unity_out_bool_.setZero();
+
   return true;
 }
 
@@ -147,7 +154,8 @@ void ForceControllerNR::update(const ros::Time& /*time*/, const ros::Duration& p
   }
   desired_force_torque(0) = 30 * force_input(0);
   desired_force_torque(1) = 50 * force_input(1);
-  desired_force_torque(2) = 50 * force_input(2) + desired_mass_ * -9.81;
+  desired_force_torque(2) = 50 * force_input(2) + desired_mass_ * -9.81 + unity_out_bool_(1) * 9.81;
+  
   //************* Free motion + force field, Editor: Shih-Wen Chen *************
 
   tau_ext = tau_measured - gravity - tau_ext_initial_;
@@ -206,6 +214,11 @@ Eigen::Matrix<double, 7, 1> ForceControllerNR::saturateTorqueRate(
     tau_d_saturated[i] = tau_J_d[i] + std::max(std::min(difference, kDeltaTauMax), -kDeltaTauMax);
   }
   return tau_d_saturated;
+}
+
+void ForceControllerNR::Unity_publisher(
+    const geometry_msgs::Vector3ConstPtr& msg) {
+  unity_out_bool_ << msg->x, msg->y, msg->z;
 }
 
 }  // namespace franka_panda_controller_swc
