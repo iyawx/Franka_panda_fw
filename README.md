@@ -73,10 +73,14 @@ roslaunch franka_panda_controller_swc cartesian_impedance_controller_NR.launch r
 
 
 ## Receive the messages from ROS in Unity
-#### Add new message types
+#### Add new message types in Unity
 URL:https://github.com/siemens/ros-sharp/wiki/Dev_NewMessageTypes  
 > **Try to use **method 1**, which is the easiest method.**  
 > **Make sure the PACKAGE name is same as the package name in ROS**  
+
+#### Subscribe the topic from Unity  
+The following comparing page shows how to subscribe the topic from Unity:  
+URL: https://github.com/iyawx/franka_panda_controller_swc/compare/NeuroRehack?diff=unified&expand=1
 
 
 ## Theory
