@@ -80,7 +80,7 @@ URL:https://github.com/siemens/ros-sharp/wiki/Dev_NewMessageTypes
 
 #### Subscribe the topic from Unity  
 The following comparing page shows how to subscribe the topic from Unity:  
-URL: https://github.com/iyawx/franka_panda_controller_swc/compare/NeuroRehack?diff=unified&expand=1
+URL: https://github.com/iyawx/franka_panda_controller_swc/commit/bfbfaf7c37914718635930921f98d808971f99d4
 
 
 ## Theory
