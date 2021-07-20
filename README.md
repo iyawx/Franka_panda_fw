@@ -32,7 +32,7 @@ source ~/catkin_ws/devel/setup.bash
 ```
 roslaunch franka_panda_controller_swc joint_impedance_controller.launch robot_ip:=172.16.0.2 load_gripper:=true
 ```
-## froce controller
+## dual cartisan impedance controller 
 ```
-roslaunch franka_panda_controller_swc force_controller_NR.launch robot_ip:=172.16.0.2 load_gripper:=true
+roslaunch franka_panda_controller_swc dual_arm_cartesian_impedance_controller.launch
 ```
