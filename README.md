@@ -2,10 +2,11 @@
 
 **For more information of the franka software setup,  
 please refer to `Setup` > `SETUP.md`**
----
+
 **For more information of the prerequisites of controller setup,  
-please refer to `Setup` > `NEWCONTROLLER.md`**
----
+please refer to `Setup` > `CONTROLLER.md`**
+
+
 ## To compile the file after modified the code:
 ```
 cd catkin_ws 
