@@ -1,4 +1,4 @@
-# Franka Controller - testing
+# Franka Controllers
 
 **For more information of the franka software setup, please refer to `Setup` > `SETUP.md`**
 
