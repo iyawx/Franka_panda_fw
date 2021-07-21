@@ -1,4 +1,4 @@
-#include <franka_panda_controller.h>
+#include <franka_panda_controller_swc/joint_impedance_controller.h>
 #include <cmath>
 #include <memory>
 #include <iostream>
@@ -7,7 +7,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 #include <unsupported/Eigen/MatrixFunctions>
-#include <pseudo_inversion.h>
+#include <franka_panda_controller_swc/pseudo_inversion.h>
 #include <franka/robot_state.h>
 
 namespace franka_panda_controller_swc {
@@ -126,63 +126,75 @@ bool JointImpedanceController::init(hardware_interface::RobotHW* robot_hw,
   return true;
 }
 
+////////// Trajection Planning <Start> --- editor: Shih-Wen Chen //////////
+
 void JointImpedanceController::starting(const ros::Time& /*time*/) {
+  // initial end-effector config
   initial_pose_ = cartesian_pose_handle_->getRobotState().O_T_EE_d;
+
+  // initial eblow config
   initial_elbow_ = cartesian_pose_handle_->getRobotState().elbow_d;
+
+  // final end-effector config
   /*end_pose_ = {1.0, 0.0, 0.0, 0.0,
     0.0, -1.0, 0.0, 0.0,
     0.0, 0.0, -1.0, 0.0,
     -0.072078, 0.537113, 0.547998, 1.0};*/
-  /*
   end_pose_ = {0.0, 0.0, 1.0, 0.0,
                1.0, 0.0, 0.0, 0.0,
                0.0, 1.0, 0.0, 0.0,
-               -0.328405, 0.549474, 0.785429, 1.0};*/
-  /*
-  end_pose_ = {0.0, 1.0, 0.0, 0.0,
+               -0.328405, 0.549474, 0.785429, 1.0};
+  /*end_pose_ = {0.0, 1.0, 0.0, 0.0,
                0.0, 0.0, 1.0, 0.0,
                1.0, 0.0, 0.0, 0.0,
                0.012693, 0.536757, 0.410588, 1.0};*/
-  end_pose_ = {0.0, 1.0, 0.0, 0.0,
+  /*end_pose_ = {0.0, 1.0, 0.0, 0.0,
                -1.0, 0.0, 0.0, 0.0,
                0.0, 0.0, 1.0, 0.0,
-               -0.106664, 0.505892, 0.663967, 1.0};
-  end_elbow_ = {1.54, -1.0};
+               -0.106664, 0.505892, 0.663967, 1.0};*/
+
+  // final end-effector config
+  end_elbow_ = {1.3, -1.0};
 }
 
 void JointImpedanceController::update(const ros::Time& /*time*/,
                                              const ros::Duration& period) {
-  
+  // accummulating time
   accu_time_ += period.toSec();
+
+  // convert std to Eigen format
   Eigen::Map<Eigen::Matrix<double, 4, 4>> init_com(initial_pose_.data());
   Eigen::Map<Eigen::Matrix<double, 4, 4>> end_com(end_pose_.data());
   Eigen::Matrix<double, 4, 4> pose_desired;
   Eigen::Matrix<double, 4, 4> pervision_pose;
+
+  // screw motion variation
   double T = 10;
   double a_3 = 10/pow(T,3);
   double a_4 = -15/pow(T,4);
   double a_5 = 6/pow(T,5);
   double s = a_3*pow(accu_time_,3) + a_4*pow(accu_time_,4) + a_5*pow(accu_time_,5);
+  
+  // std array for input command
   std::array<double, 16> command_mat_pose = initial_pose_;
   std::array<double, 2> command_mat_elbow = initial_elbow_;
 
   if (accu_time_ <= T) {
-    // X_start*(exp(log(inv(X_start)*X_end)s))
-    // pose
-    /*
-    Eigen::MatrixXd initial_pose_pinv_;
-    pseudoInverse(init_com, initial_pose_pinv_);*/
-    Eigen::Matrix<double, 4, 4> initial_pose_pinv_ = init_com.inverse();
-    inv_init_end_ = initial_pose_pinv_ * end_com;
+    // from start config to end config
+    // pose traj (screw motion) -> X_start*(exp(log(inv(X_start)*X_end)s))
+    Eigen::Matrix<double, 4, 4> initial_pose_inv_ = init_com.inverse();
+    inv_init_end_ = initial_pose_inv_ * end_com;
     log_init_end_s_ = inv_init_end_.log() * s;
     pose_desired = init_com * log_init_end_s_.exp();
-    // elbow
+
+    // elbow traj
     command_mat_elbow[0] = initial_elbow_[0] + s * (end_elbow_[0] - initial_elbow_[0]);
 
   } else if (accu_time_ <= (T+5)){
-    // stop
+    // stop 5 seconds
     pose_desired = end_com;
     command_mat_elbow = end_elbow_;
+
   } else {
     // sin-motion
     if (vel_current_ <= vel_max_) {
@@ -195,8 +207,10 @@ void JointImpedanceController::update(const ros::Time& /*time*/,
     }
     pose_desired = end_com;
     command_mat_elbow = end_elbow_;
+
   }
-  
+
+  // transfer Eigne matrix format to std vector
   command_mat_pose[0] = pose_desired.data()[0];
   command_mat_pose[1] = pose_desired.data()[1];
   command_mat_pose[2] = pose_desired.data()[2];
@@ -210,15 +224,19 @@ void JointImpedanceController::update(const ros::Time& /*time*/,
   command_mat_pose[13] = pose_desired.data()[13];
   command_mat_pose[14] = pose_desired.data()[14];
 
+  // input the command to robot
   if (accu_time_ <= T+5){
-  //  cartesian_pose_handle_->setCommand(command_mat_pose);
-    cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
+    cartesian_pose_handle_->setCommand(command_mat_pose);
+  //  cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
   } else {
     command_mat_pose[14] += radius_ * std::sin(angle_);
-    command_mat_elbow[0] -= radius_ *2* std::sin(angle_);
-  //  cartesian_pose_handle_->setCommand(command_mat_pose);
-    cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
+    cartesian_pose_handle_->setCommand(command_mat_pose);
+  //  command_mat_elbow[0] -= radius_ *2* std::sin(angle_);  
+  //  cartesian_pose_handle_->setCommand(command_mat_pose, command_mat_elbow);
   }
+
+  ////////// Trajection Planning <End> --- editor: Shih-Wen Chen //////////
+
 
   franka::RobotState robot_state = cartesian_pose_handle_->getRobotState();
   std::array<double, 7> coriolis = model_handle_->getCoriolis();
@@ -229,6 +247,7 @@ void JointImpedanceController::update(const ros::Time& /*time*/,
   std::cout << "  y: "<< robot_state.O_T_EE[13] << "\n";
   std::cout << "  z: "<< robot_state.O_T_EE[14] << "\n";*/
   
+
   double alpha = 0.99;
   for (size_t i = 0; i < 7; i++) {
     dq_filtered_[i] = (1 - alpha) * dq_filtered_[i] + alpha * robot_state.dq[i];

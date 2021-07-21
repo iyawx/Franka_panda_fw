@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """ This simple script creates an interactive marker for changing desired centering pose of
-    two the dual_panda_cartesian_impedance_example_controller. It features also resetting the
+    two the dual_panda_cartesian_impedance_controller. It features also resetting the
     marker to current centering pose between the left and the right endeffector.
 """
 
@@ -104,7 +104,7 @@ def reset_marker_pose_blocking():
     centering_frame_ready = False
 
     centering_frame_pose_sub = rospy.Subscriber(
-        "dual_arm_cartesian_impedance_example_controller/centering_frame",
+        "dual_arm_cartesian_impedance_controller/centering_frame",
         PoseStamped, centering_pose_callback)
 
     # Get initial pose for the interactive marker
@@ -158,7 +158,7 @@ if __name__ == "__main__":
 
     # Initialize publisher for publishing desired centering pose
     pose_pub = rospy.Publisher(
-        "dual_arm_cartesian_impedance_example_controller/centering_frame_target_pose",
+        "dual_arm_cartesian_impedance_controller/centering_frame_target_pose",
         PoseStamped,
         queue_size=1)
 
