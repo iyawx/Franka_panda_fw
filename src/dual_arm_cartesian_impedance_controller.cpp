@@ -245,6 +245,40 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
 
+  //*******************Collision position: start*******************
+  if (robot_state.O_T_EE[12] >= 0) {
+    arm_data.position_d_target_up = arm_data.position_d_target_;
+  } else if (robot_state.O_T_EE[12] < 0 && robot_state.q[0] < 0) {
+    arm_data.position_d_target_up = arm_data.position_d_target_;
+    arm_data.position_d_target_up(0) = -arm_data.position_d_target_(0);
+  } /*else {
+    arm_data.position_d_target_up = arm_data.position_d_target_;
+    arm_data.position_d_target_up(0) = arm_data.position_d_target_(1);
+    arm_data.position_d_target_up(1) = arm_data.position_d_target_(0); 
+  }*/
+  //*******************Collision position: end*******************
+
+  //*******************Orientation: start*******************
+  auto& left_arm_data = arms_data_.at(left_arm_id_);
+  std::array<double, 16> rotational_hand_l;
+  rotational_hand_l = {1.0, 0.0, 0.0, 0.0,
+                       0.0, 0.0, -1.0, 0.0,
+                       0.0, 1.0, 0.0, 0.0,
+                       0.288125, 0.202355, 0.692674, 1.0};
+  Eigen::Affine3d left_transform(Eigen::Matrix4d::Map(rotational_hand_l.data()));
+  left_arm_data.orientation_d_target_ = Eigen::Quaterniond(left_transform.linear());
+
+  auto& right_arm_data = arms_data_.at(right_arm_id_);
+  std::array<double, 16> rotational_hand_r;
+  rotational_hand_r = {1.0, 0.0, 0.0, 0.0,
+                       0.0, 0.0, 1.0, 0.0,
+                       0.0, -1.0, 0.0, 0.0,
+                       0.288125, 0.202355, 0.692674, 1.0};
+  Eigen::Affine3d right_transform(Eigen::Matrix4d::Map(rotational_hand_r.data()));
+  right_arm_data.orientation_d_target_ = Eigen::Quaterniond(right_transform.linear());
+
+  //*******************Orientation: end*******************
+
   // compute error to desired pose
   // position error
   Eigen::Matrix<double, 6, 1> error;
@@ -278,6 +312,20 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
                     jacobian.transpose() * jacobian_transpose_pinv) *
                        (arm_data.nullspace_stiffness_ * (arm_data.q_d_nullspace_ - q) -
                         (2.0 * sqrt(arm_data.nullspace_stiffness_)) * dq);
+  
+
+  /*
+  //*******************Mass: start*******************
+  Eigen::VectorXd tau_f(7), desired_force_torque(6);
+  desired_force_torque.setZero();
+  desired_force_torque(2) = 1 * -9.81;
+  tau_f << jacobian.transpose() * desired_force_torque;
+  // Desired torque
+  tau_d << tau_task + tau_nullspace + coriolis + tau_f;
+  //*******************Mass: end*******************
+  */
+  
+  
   // Desired torque
   tau_d << tau_task + tau_nullspace + coriolis;
   // Saturate torque rate to avoid discontinuities
@@ -286,30 +334,39 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
     arm_data.joint_handles_[i].setCommand(tau_d(i));
   }
 
-  //*******************Collision avoidance*******************
-  franka::RobotState robot_state_right =
-      arms_data_.at(right_arm_id_).state_handle_->getRobotState();
+  
+  //*******************Base joint alignment: start*******************
+  if (robot_state.q[0] > 1.5 || robot_state.q[0] < -1.5) {
+    arm_data.nullspace_stiffness_target_ = 5.0;
+  } else {
+    arm_data.nullspace_stiffness_target_ = 0.0;
+  } 
+  //*******************Base joint alignment: end*******************
+
+
+  //*******************Collision avoidance: start*******************
+  franka::RobotState robot_state_right = arms_data_.at(right_arm_id_).state_handle_->getRobotState();
   franka::RobotState robot_state_left = arms_data_.at(left_arm_id_).state_handle_->getRobotState();
   Eigen::VectorXd r_position_c(3), l_position_c(3);
   for (size_t i = 0; i < 3; i++) {
     r_position_c(i) = robot_state_right.O_T_EE[12+i];
     l_position_c(i) = robot_state_left.O_T_EE[12+i];
   }
-  l_position_c(1) = l_position_c(1) - 0.6;
-  if ((r_position_c - l_position_c).norm() < 0.4 && (r_position_c - l_position_c).norm() >= 0.2) {
+  l_position_c(1) = l_position_c(1) - 0.8;
+  if ((r_position_c - l_position_c).norm() < 0.3 && (r_position_c - l_position_c).norm() >= 0.15) {
     std::cout << "Too close!!!" << "\n";
     arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << 0 * Eigen::Matrix3d::Identity();
     arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 0 * Eigen::Matrix3d::Identity();
-  } else if ((r_position_c - l_position_c).norm() < 0.2) {
+  } else if ((r_position_c - l_position_c).norm() < 0.15) {
     std::cout << "Collision!!!" << "\n";
     arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
-      << 50 * Eigen::Matrix3d::Identity();
+      << 45 * Eigen::Matrix3d::Identity();
     arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 2 * sqrt(50) * Eigen::Matrix3d::Identity();
   } 
-  //*******************Collision avoidance*******************
+  //*******************Collision avoidance: end*******************
 
 
   // update parameters changed online either through dynamic reconfigure or through the interactive
@@ -320,10 +377,10 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
                                   (1.0 - arm_data.filter_params_) * arm_data.cartesian_damping_;
   arm_data.nullspace_stiffness_ = arm_data.filter_params_ * arm_data.nullspace_stiffness_target_ +
                                   (1.0 - arm_data.filter_params_) * arm_data.nullspace_stiffness_;
-  arm_data.position_d_ = arm_data.filter_params_ * arm_data.position_d_target_ +
+  arm_data.position_d_ = arm_data.filter_params_ * arm_data.position_d_target_up +
                          (1.0 - arm_data.filter_params_) * arm_data.position_d_;
   arm_data.orientation_d_ =
-      arm_data.orientation_d_.slerp(arm_data.filter_params_, arm_data.orientation_d_target_);
+      arm_data.orientation_d_.slerp(arm_data.filter_params_ * 0.5, arm_data.orientation_d_target_);
 
 }
 

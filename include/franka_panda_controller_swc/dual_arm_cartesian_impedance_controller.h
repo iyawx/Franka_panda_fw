@@ -53,6 +53,7 @@ struct FrankaDataContainer {
   Eigen::Quaterniond orientation_d_;         ///< Target orientation of the end effector.
   Eigen::Vector3d position_d_target_;        ///< Unfiltered raw value.
   Eigen::Quaterniond orientation_d_target_;  ///< Unfiltered raw value.
+  Eigen::Vector3d position_d_target_up;
 };
 
 /**
@@ -138,6 +139,7 @@ class DualArmCartesianImpedanceController
    * @param[in] arm_data The data container of the arm to control.
    */
   void updateArm(FrankaDataContainer& arm_data);
+
 
   /**
    * Prepares all internal states to be ready to run the real-time control for one arm.
