@@ -245,34 +245,36 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   Eigen::Vector3d position(transform.translation());
   Eigen::Quaterniond orientation(transform.linear());
 
+  
   //*******************Collision position: start*******************
-  if (robot_state.O_T_EE[12] >= 0) {
+  if (robot_state.O_T_EE[12] >= 0.15) {
     arm_data.position_d_target_up = arm_data.position_d_target_;
-  } else if (robot_state.O_T_EE[12] < 0 && robot_state.q[0] < 0) {
+  } else if (robot_state.O_T_EE[12] > -0.15 && robot_state.O_T_EE[12] < 0.15){
+    arm_data.position_d_target_up = arm_data.position_d_target_;
+    arm_data.position_d_target_up(0) = 0.0;
+    arm_data.position_d_target_up(0) = 0.2;
+  }else if (robot_state.O_T_EE[12] < -0.15 && robot_state.q[0] < 0) {
     arm_data.position_d_target_up = arm_data.position_d_target_;
     arm_data.position_d_target_up(0) = -arm_data.position_d_target_(0);
-  } /*else {
-    arm_data.position_d_target_up = arm_data.position_d_target_;
-    arm_data.position_d_target_up(0) = arm_data.position_d_target_(1);
-    arm_data.position_d_target_up(1) = arm_data.position_d_target_(0); 
-  }*/
+  } 
   //*******************Collision position: end*******************
+  
 
   //*******************Orientation: start*******************
   auto& left_arm_data = arms_data_.at(left_arm_id_);
+  auto& right_arm_data = arms_data_.at(right_arm_id_);
   std::array<double, 16> rotational_hand_l;
   rotational_hand_l = {1.0, 0.0, 0.0, 0.0,
-                       0.0, 0.0, -1.0, 0.0,
-                       0.0, 1.0, 0.0, 0.0,
+                       0.0, -0.707, -0.707, 0.0,
+                       0.0, 0.707, -0.707, 0.0,
                        0.288125, 0.202355, 0.692674, 1.0};
   Eigen::Affine3d left_transform(Eigen::Matrix4d::Map(rotational_hand_l.data()));
   left_arm_data.orientation_d_target_ = Eigen::Quaterniond(left_transform.linear());
 
-  auto& right_arm_data = arms_data_.at(right_arm_id_);
   std::array<double, 16> rotational_hand_r;
   rotational_hand_r = {1.0, 0.0, 0.0, 0.0,
-                       0.0, 0.0, 1.0, 0.0,
-                       0.0, -1.0, 0.0, 0.0,
+                       0.0, -0.707, 0.707, 0.0,
+                       0.0, -0.707, -0.707, 0.0,
                        0.288125, 0.202355, 0.692674, 1.0};
   Eigen::Affine3d right_transform(Eigen::Matrix4d::Map(rotational_hand_r.data()));
   right_arm_data.orientation_d_target_ = Eigen::Quaterniond(right_transform.linear());
@@ -336,7 +338,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
 
   
   //*******************Base joint alignment: start*******************
-  if (robot_state.q[0] > 1.5 || robot_state.q[0] < -1.5) {
+  if (robot_state.q[0] > 1.8 || robot_state.q[0] < -1.8) {
     arm_data.nullspace_stiffness_target_ = 5.0;
   } else {
     arm_data.nullspace_stiffness_target_ = 0.0;
@@ -347,25 +349,165 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   //*******************Collision avoidance: start*******************
   franka::RobotState robot_state_right = arms_data_.at(right_arm_id_).state_handle_->getRobotState();
   franka::RobotState robot_state_left = arms_data_.at(left_arm_id_).state_handle_->getRobotState();
-  Eigen::VectorXd r_position_c(3), l_position_c(3);
+  Eigen::VectorXd r_position_c(3), l_position_c(3), r_position_elbow(3), l_position_elbow(3);
+  Eigen::VectorXd r_position_b(3), l_position_b(3), r_position_w(3), l_position_w(3), r_position_s(3), l_position_s(3);
+  Eigen::VectorXd r_joint_cos(7), r_joint_sin(7), l_joint_cos(7), l_joint_sin(7);
+  double distance_robots = 0.8;
+
+  //**************end effector**************
+
+  // end effector
   for (size_t i = 0; i < 3; i++) {
     r_position_c(i) = robot_state_right.O_T_EE[12+i];
     l_position_c(i) = robot_state_left.O_T_EE[12+i];
   }
-  l_position_c(1) = l_position_c(1) - 0.8;
-  if ((r_position_c - l_position_c).norm() < 0.3 && (r_position_c - l_position_c).norm() >= 0.15) {
-    std::cout << "Too close!!!" << "\n";
+  r_position_c(1) = r_position_c(1) - 0.05;
+  l_position_c(1) = l_position_c(1) - distance_robots + 0.05;
+  if ((r_position_c - l_position_c).norm() >= 0.15 && (r_position_c - l_position_c).norm() < 0.2) {
     arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << 0 * Eigen::Matrix3d::Identity();
     arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 0 * Eigen::Matrix3d::Identity();
   } else if ((r_position_c - l_position_c).norm() < 0.15) {
-    std::cout << "Collision!!!" << "\n";
     arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << 45 * Eigen::Matrix3d::Identity();
     arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 2 * sqrt(50) * Eigen::Matrix3d::Identity();
   } 
+
+  //**************base and shoulder**************
+
+  // base
+  r_position_b.setZero();
+  l_position_b.setZero();
+  r_position_s(2) = 0.05;
+  l_position_s(2) = 0.05;
+  r_position_b(1) = -0.05;
+  l_position_b(1) = - distance_robots + 0.05;
+  // shoulder
+  r_position_s = r_position_b;
+  l_position_s = l_position_b;
+  r_position_s(2) = 0.3;
+  l_position_s(2) = 0.3;
+
+  if (((r_position_b - l_position_c).norm() >= 0.2 && (r_position_b - l_position_c).norm() < 0.25) || 
+     ((r_position_s - l_position_c).norm() >= 0.2 && (r_position_s - l_position_c).norm() < 0.25)) {
+    left_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+    left_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+  }else if ((r_position_b - l_position_c).norm() < 0.2 || (r_position_s - l_position_c).norm() < 0.2) {
+    left_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 45 * Eigen::Matrix3d::Identity();
+    left_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 2 * sqrt(50) * Eigen::Matrix3d::Identity();
+  }
+  if (((l_position_b - r_position_c).norm() >= 0.2 && (l_position_b - r_position_c).norm() < 0.25) || 
+     ((l_position_s - r_position_c).norm() >= 0.2 && (l_position_s - r_position_c).norm() < 0.25)) {
+    right_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+    right_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+  } else if ((l_position_b - r_position_c).norm() < 0.2 || (l_position_s - r_position_c).norm() < 0.2) {
+    right_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 45 * Eigen::Matrix3d::Identity();
+    right_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 2 * sqrt(50) * Eigen::Matrix3d::Identity();
+  }
+
+  //**************elbow and wrist**************
+
+  // lenght of links
+  double L1 = 0.333;
+  double L2 = 0.316;
+  double L3 = 0.0825;
+  double L4 = 0.28;  // till franka icon
+  for (size_t i = 0; i < 7; i++) {
+    r_joint_cos(i) = std::cos(robot_state_right.q[i]);
+    r_joint_sin(i) = std::sin(robot_state_right.q[i]);
+    l_joint_cos(i) = std::cos(robot_state_left.q[i]);
+    l_joint_sin(i) = std::sin(robot_state_left.q[i]);
+  }
+  // elbow 
+  r_position_elbow(0) = L2 * r_joint_cos(0) * r_joint_sin(1);
+  r_position_elbow(1) = L2 * r_joint_sin(0) * r_joint_sin(1);
+  r_position_elbow(2) = L1 + L2 * r_joint_cos(1);
+  l_position_elbow(0) = L2 * l_joint_cos(0) * l_joint_sin(1);
+  l_position_elbow(1) = L2 * l_joint_sin(0) * l_joint_sin(1);
+  l_position_elbow(2) = L1 + L2 * l_joint_cos(1);
+  r_position_elbow(1) = r_position_elbow(1) - 0.05;
+  l_position_elbow(1) = l_position_elbow(1) - distance_robots + 0.05;
+  // wrist
+  r_position_w(0) = r_position_elbow(0) - L3 * (r_joint_sin(0) * r_joint_sin(2) - r_joint_cos(0) * r_joint_cos(1) * r_joint_cos(2)) + 
+                    L3 * (r_joint_cos(3) * (r_joint_sin(0) * r_joint_sin(2) - r_joint_cos(0) * r_joint_cos(1) * r_joint_cos(2)) - r_joint_cos(0) * r_joint_sin(1) * r_joint_sin(3)) + 
+                    L4 * (r_joint_sin(3) * (r_joint_sin(0) * r_joint_sin(2) - r_joint_cos(0) * r_joint_cos(1) * r_joint_cos(2)) + r_joint_cos(0) * r_joint_sin(1) * r_joint_cos(3));
+  r_position_w(1) = r_position_elbow(1) + L3 * (r_joint_cos(0) * r_joint_sin(2) + r_joint_sin(0) * r_joint_cos(1) * r_joint_cos(2)) - 
+                    L3 * (r_joint_cos(3) * (r_joint_cos(0) * r_joint_sin(2) + r_joint_sin(0) * r_joint_cos(1) * r_joint_cos(2)) + r_joint_sin(0) * r_joint_sin(1) * r_joint_sin(3)) - 
+                    L4 * (r_joint_sin(3) * (r_joint_cos(0) * r_joint_sin(2) + r_joint_sin(0) * r_joint_cos(1) * r_joint_cos(2)) - r_joint_sin(0) * r_joint_sin(1) * r_joint_cos(3));
+  r_position_w(2) = r_position_elbow(2) - L3 * ((r_joint_cos(1) * r_joint_sin(3)) - r_joint_cos(2) * r_joint_cos(3) * r_joint_sin(1)) + 
+                    L4 * (r_joint_cos(1) * r_joint_cos(3) + r_joint_cos(2) * r_joint_sin(1) * r_joint_sin(3)) - 
+                    L3 * r_joint_cos(2) * r_joint_sin(1);
+  l_position_w(0) = l_position_elbow(0) - L3 * (l_joint_sin(0) * l_joint_sin(2) - l_joint_cos(0) * l_joint_cos(1) * l_joint_cos(2)) + 
+                    L3 * (l_joint_cos(3) * (l_joint_sin(0) * l_joint_sin(2) - l_joint_cos(0) * l_joint_cos(1) * l_joint_cos(2)) - l_joint_cos(0) * l_joint_sin(1) * l_joint_sin(3)) + 
+                    L4 * (l_joint_sin(3) * (l_joint_sin(0) * l_joint_sin(2) - l_joint_cos(0) * l_joint_cos(1) * l_joint_cos(2)) + l_joint_cos(0) * l_joint_sin(1) * l_joint_cos(3));
+  l_position_w(1) = l_position_elbow(1) + L3 * (l_joint_cos(0) * l_joint_sin(2) + l_joint_sin(0) * l_joint_cos(1) * l_joint_cos(2)) - 
+                    L3 * (l_joint_cos(3) * (l_joint_cos(0) * l_joint_sin(2) + l_joint_sin(0) * l_joint_cos(1) * l_joint_cos(2)) + l_joint_sin(0) * l_joint_sin(1) * l_joint_sin(3)) - 
+                    L4 * (l_joint_sin(3) * (l_joint_cos(0) * l_joint_sin(2) + l_joint_sin(0) * l_joint_cos(1) * l_joint_cos(2)) - l_joint_sin(0) * l_joint_sin(1) * l_joint_cos(3));
+  l_position_w(2) = l_position_elbow(2) - L3 * ((l_joint_cos(1) * l_joint_sin(3)) - l_joint_cos(2) * l_joint_cos(3) * l_joint_sin(1)) + 
+                    L4 * (l_joint_cos(1) * l_joint_cos(3) + l_joint_cos(2) * l_joint_sin(1) * l_joint_sin(3)) - 
+                    L3 * l_joint_cos(2) * l_joint_sin(1);
+  
+  // right elbow/wrist v.s. left end effector
+  if (((r_position_elbow - l_position_c).norm() >= 0.2 && (r_position_elbow - l_position_c).norm() < 0.25) || 
+     ((r_position_w - l_position_c).norm() >= 0.15 && (r_position_w - l_position_c).norm() < 0.2)) {
+    right_arm_data.nullspace_stiffness_target_ = 0.0;
+    left_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+    left_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+  }else if ((r_position_elbow - l_position_c).norm() < 0.2 || (r_position_w - l_position_c).norm() < 0.15) {
+    right_arm_data.nullspace_stiffness_target_ = 5.0;
+    left_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 45 * Eigen::Matrix3d::Identity();
+    left_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 2 * sqrt(50) * Eigen::Matrix3d::Identity();
+  }
+  // left elbow/wirst v.s. right end effector
+  if (((l_position_elbow - r_position_c).norm() >= 0.2 && (l_position_elbow - r_position_c).norm() < 0.25) || 
+     ((l_position_w - r_position_c).norm() >= 0.2 && (l_position_w - r_position_c).norm() < 0.25)) {
+    left_arm_data.nullspace_stiffness_target_ = 0.0;
+    right_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+    right_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+  } else if ((l_position_elbow - r_position_c).norm() < 0.2 || (l_position_w - r_position_c).norm() < 0.2) {
+    left_arm_data.nullspace_stiffness_target_ = 5.0;
+    right_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 45 * Eigen::Matrix3d::Identity();
+    right_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 2 * sqrt(50) * Eigen::Matrix3d::Identity();
+  }
+  // left elbow v.s. right elbow
+  if ((l_position_elbow - r_position_elbow).norm() >= 0.2 && (l_position_elbow - r_position_elbow).norm() < 0.25) {
+    left_arm_data.nullspace_stiffness_target_ = 0.0;
+    right_arm_data.nullspace_stiffness_target_ = 0.0;
+  } else if ((l_position_elbow - r_position_elbow).norm() < 0.2) {
+    left_arm_data.nullspace_stiffness_target_ = 5.0;
+    right_arm_data.nullspace_stiffness_target_ = 5.0;
+  } 
+  // left wrist v.s. right wrist
+  if ((l_position_w - r_position_w).norm() >= 0.2 && (l_position_w - r_position_w).norm() < 0.25) {
+    arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+    arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 0 * Eigen::Matrix3d::Identity();
+  } else if ((l_position_w - r_position_w).norm() < 0.2) {
+    arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 45 * Eigen::Matrix3d::Identity();
+    arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 2 * sqrt(50) * Eigen::Matrix3d::Identity();
+  }
+
   //*******************Collision avoidance: end*******************
 
 
