@@ -164,11 +164,11 @@ void CartesianImpedanceController::update(const ros::Time& /*time*/,
   // allocate variables
   Eigen::VectorXd tau_task(7), tau_nullspace(7), tau_d(7);
 
-
+  /*
   Eigen::VectorXd tau_f(7), desired_force_torque(6);
   desired_force_torque.setZero();
   desired_force_torque(2) = 0.5 * -9.81;
-  tau_f << jacobian.transpose() * desired_force_torque;
+  tau_f << jacobian.transpose() * desired_force_torque;*/
 
 
 
@@ -186,7 +186,7 @@ void CartesianImpedanceController::update(const ros::Time& /*time*/,
                        (nullspace_stiffness_ * (q_d_nullspace_ - q) -
                         (2.0 * sqrt(nullspace_stiffness_)) * dq);
   // Desired torque
-  tau_d << tau_task + tau_nullspace + tau_f + coriolis;
+  tau_d << tau_task + tau_nullspace + coriolis;
   // Saturate torque rate to avoid discontinuities
   tau_d << saturateTorqueRate(tau_d, tau_J_d);
   for (size_t i = 0; i < 7; ++i) {

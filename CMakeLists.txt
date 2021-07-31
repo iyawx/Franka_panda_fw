@@ -64,6 +64,8 @@ add_library(franka_panda_controller_swc
   src/force_controller_NR.cpp
   src/cartesian_impedance_controller_NR.cpp
   src/cartesian_impedance_controller.cpp
+  src/joint_position_controller.cpp
+  src/joint_velocity_controller.cpp
   src/dual_arm_cartesian_impedance_controller.cpp
 )
 

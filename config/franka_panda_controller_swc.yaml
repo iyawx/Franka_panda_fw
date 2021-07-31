@@ -90,3 +90,25 @@ dual_arm_cartesian_impedance_controller:
             - panda_2_joint5
             - panda_2_joint6
             - panda_2_joint7
+
+joint_position_controller:
+    type: franka_panda_controller_swc/JointPositionController
+    joint_names:
+        - panda_joint1
+        - panda_joint2
+        - panda_joint3
+        - panda_joint4
+        - panda_joint5
+        - panda_joint6
+        - panda_joint7
+
+joint_velocity_controller:
+    type: franka_panda_controller_swc/JointVelocityController
+    joint_names:
+        - panda_joint1
+        - panda_joint2
+        - panda_joint3
+        - panda_joint4
+        - panda_joint5
+        - panda_joint6
+        - panda_joint7

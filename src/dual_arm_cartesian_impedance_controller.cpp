@@ -488,10 +488,10 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
       << 2 * sqrt(50) * Eigen::Matrix3d::Identity();
   }
   // left elbow v.s. right elbow
-  if ((l_position_elbow - r_position_elbow).norm() >= 0.2 && (l_position_elbow - r_position_elbow).norm() < 0.25) {
+  if ((l_position_elbow - r_position_elbow).norm() >= 0.15 && (l_position_elbow - r_position_elbow).norm() < 0.2) {
     left_arm_data.nullspace_stiffness_target_ = 0.0;
     right_arm_data.nullspace_stiffness_target_ = 0.0;
-  } else if ((l_position_elbow - r_position_elbow).norm() < 0.2) {
+  } else if ((l_position_elbow - r_position_elbow).norm() < 0.15) {
     left_arm_data.nullspace_stiffness_target_ = 5.0;
     right_arm_data.nullspace_stiffness_target_ = 5.0;
   } 
