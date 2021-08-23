@@ -11,6 +11,7 @@ sudo apt-get install ros-melodic-rosbridge-suite
 ### Connecting the ROS with Unity via ROS bridge:
 ```
 source /opt/ros/melodic/setup.bash
+source ~/catkin_ws/devel/setup.bash
 roslaunch rosbridge_server rosbridge_websocket.launch
 ```
 ### Testing the setting by publishing a simple topic:
