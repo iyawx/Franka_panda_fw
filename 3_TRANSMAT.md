@@ -21,3 +21,6 @@ rostopic echo /franka_state_controller/franka_states/O_T_EE
 ```
 rostopic echo /franka_state_controller/franka_states/elbow
 ```
+
+##### All the parameters we can get from the Franka controller
+https://frankaemika.github.io/libfranka/structfranka_1_1RobotState.html
