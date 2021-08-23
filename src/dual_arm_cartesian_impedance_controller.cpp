@@ -275,20 +275,6 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
       left_arm_data.position_d_target_up(2) = 0.28;
     }
   }
-
-  /*
-  if (robot_state.O_T_EE[12] >= 0.15) {
-    arm_data.position_d_target_up = arm_data.position_d_target_;
-  } else if (robot_state.O_T_EE[12] > -0.15 && robot_state.O_T_EE[12] < 0.15){
-    arm_data.position_d_target_up = arm_data.position_d_target_;
-    right_arm_data.position_d_target_up(0) = 0.0;
-    right_arm_data.position_d_target_up(1) = -0.2;
-    left_arm_data.position_d_target_up(0) = 0.0;
-    left_arm_data.position_d_target_up(1) = 0.2;
-  }else if (robot_state.O_T_EE[12] < -0.15 && robot_state.q[0] < 0) {
-    arm_data.position_d_target_up = arm_data.position_d_target_;
-    arm_data.position_d_target_up(0) = -arm_data.position_d_target_(0);
-  }*/ 
   //*******************Collision position: end*******************
   
   /*
@@ -369,13 +355,22 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
 
   
   //*******************Base joint alignment: start*******************
-  if (robot_state.q[0] > 1.8 || robot_state.q[0] < -1.8) {
+  if (robot_state.q[0] > 2 || robot_state.q[0] < -2) {
     arm_data.nullspace_stiffness_target_ = 5.0;
   } else {
     arm_data.nullspace_stiffness_target_ = 0.0;
   } 
   //*******************Base joint alignment: end*******************
-
+  /*
+  //*******************Speed limit: start*******************
+  Eigen::VectorXd end_vel(6), end_vel_trans(3);
+  end_vel = jacobian * dq;
+  for (size_t i = 0; i < 3; ++i) {
+    end_vel_trans(i) = end_vel(i);
+  }
+  
+  //*******************Speed limit: end*******************
+  */
 
   //*******************Collision avoidance: start*******************
   franka::RobotState robot_state_right = arms_data_.at(right_arm_id_).state_handle_->getRobotState();
@@ -395,18 +390,32 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   }
   r_position_c(1) = r_position_c(1) - 0.08;
   l_position_c(1) = l_position_c(1) - distance_robots + 0.08;
-  if ((r_position_c - l_position_c).norm() >= 0.14 && (r_position_c - l_position_c).norm() < 0.16) {
+  if ((r_position_c - l_position_c).norm() >= 0.15 && (r_position_c - l_position_c).norm() < 0.16) {
     arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << 0 * Eigen::Matrix3d::Identity();
     arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 0 * Eigen::Matrix3d::Identity();
-  } else if ((r_position_c - l_position_c).norm() < 0.14) {
+  } else if ((r_position_c - l_position_c).norm() < 0.15){
     arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << 40 * Eigen::Matrix3d::Identity();
     arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 2 * sqrt(40) * Eigen::Matrix3d::Identity();
     flag = 1;
-  } 
+  }
+  
+  /*else if ((r_position_c - l_position_c).norm() < 0.15 && end_vel_trans.norm() > 0.25) {
+    arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 60 * Eigen::Matrix3d::Identity();
+    arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 2 * sqrt(60) * Eigen::Matrix3d::Identity();
+    flag = 1;
+  } else if ((r_position_c - l_position_c).norm() < 0.15 && end_vel_trans.norm() <= 0.25){
+    arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
+      << 40 * Eigen::Matrix3d::Identity();
+    arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
+      << 2 * sqrt(40) * Eigen::Matrix3d::Identity();
+    flag = 1;
+  }*/
 
   //**************base and shoulder**************
 
@@ -459,7 +468,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   double L1 = 0.333;
   double L2 = 0.316;
   double L3 = 0.0825;
-  double L4 = 0.32;  // till franka icon
+  double L4 = 0.34;  // till franka icon
   for (size_t i = 0; i < 7; i++) {
     r_joint_cos(i) = std::cos(robot_state_right.q[i]);
     r_joint_sin(i) = std::sin(robot_state_right.q[i]);
@@ -473,8 +482,8 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   l_position_elbow(0) = L2 * l_joint_cos(0) * l_joint_sin(1) - L3 * (l_joint_sin(0) * l_joint_sin(2) - l_joint_cos(0) * l_joint_cos(1) * l_joint_cos(2));
   l_position_elbow(1) = L2 * l_joint_sin(0) * l_joint_sin(1) + L3 * (l_joint_cos(0) * l_joint_sin(2) + l_joint_sin(0) * l_joint_cos(1) * l_joint_cos(2));
   l_position_elbow(2) = L1 + L2 * l_joint_cos(1) - L3 * l_joint_cos(2) * l_joint_sin(1);
-  r_position_elbow(1) = r_position_elbow(1) - 0.08;
-  l_position_elbow(1) = l_position_elbow(1) - distance_robots + 0.05;
+  r_position_elbow(1) = r_position_elbow(1) - 0.09;
+  l_position_elbow(1) = l_position_elbow(1) - distance_robots + 0.09;
   // wrist
   r_position_w(0) = r_position_elbow(0) + 
                     L3 * (r_joint_cos(3) * (r_joint_sin(0) * r_joint_sin(2) - r_joint_cos(0) * r_joint_cos(1) * r_joint_cos(2)) - r_joint_cos(0) * r_joint_sin(1) * r_joint_sin(3)) + 
@@ -492,36 +501,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
                     L4 * (l_joint_sin(3) * (l_joint_cos(0) * l_joint_sin(2) + l_joint_sin(0) * l_joint_cos(1) * l_joint_cos(2)) - l_joint_sin(0) * l_joint_sin(1) * l_joint_cos(3));
   l_position_w(2) = l_position_elbow(2) - L3 * ((l_joint_cos(1) * l_joint_sin(3)) - l_joint_cos(2) * l_joint_cos(3) * l_joint_sin(1)) + 
                     L4 * (l_joint_cos(1) * l_joint_cos(3) + l_joint_cos(2) * l_joint_sin(1) * l_joint_sin(3));
-  /*
-  // elbow 
-  r_position_elbow(0) = L2 * r_joint_cos(0) * r_joint_sin(1);
-  r_position_elbow(1) = L2 * r_joint_sin(0) * r_joint_sin(1);
-  r_position_elbow(2) = L1 + L2 * r_joint_cos(1);
-  l_position_elbow(0) = L2 * l_joint_cos(0) * l_joint_sin(1);
-  l_position_elbow(1) = L2 * l_joint_sin(0) * l_joint_sin(1);
-  l_position_elbow(2) = L1 + L2 * l_joint_cos(1);
-  r_position_elbow(1) = r_position_elbow(1) - 0.1;
-  l_position_elbow(1) = l_position_elbow(1) - distance_robots + 0.05;
-  // wrist
-  r_position_w(0) = r_position_elbow(0) - L3 * (r_joint_sin(0) * r_joint_sin(2) - r_joint_cos(0) * r_joint_cos(1) * r_joint_cos(2)) + 
-                    L3 * (r_joint_cos(3) * (r_joint_sin(0) * r_joint_sin(2) - r_joint_cos(0) * r_joint_cos(1) * r_joint_cos(2)) - r_joint_cos(0) * r_joint_sin(1) * r_joint_sin(3)) + 
-                    L4 * (r_joint_sin(3) * (r_joint_sin(0) * r_joint_sin(2) - r_joint_cos(0) * r_joint_cos(1) * r_joint_cos(2)) + r_joint_cos(0) * r_joint_sin(1) * r_joint_cos(3));
-  r_position_w(1) = r_position_elbow(1) + L3 * (r_joint_cos(0) * r_joint_sin(2) + r_joint_sin(0) * r_joint_cos(1) * r_joint_cos(2)) - 
-                    L3 * (r_joint_cos(3) * (r_joint_cos(0) * r_joint_sin(2) + r_joint_sin(0) * r_joint_cos(1) * r_joint_cos(2)) + r_joint_sin(0) * r_joint_sin(1) * r_joint_sin(3)) - 
-                    L4 * (r_joint_sin(3) * (r_joint_cos(0) * r_joint_sin(2) + r_joint_sin(0) * r_joint_cos(1) * r_joint_cos(2)) - r_joint_sin(0) * r_joint_sin(1) * r_joint_cos(3));
-  r_position_w(2) = r_position_elbow(2) - L3 * ((r_joint_cos(1) * r_joint_sin(3)) - r_joint_cos(2) * r_joint_cos(3) * r_joint_sin(1)) + 
-                    L4 * (r_joint_cos(1) * r_joint_cos(3) + r_joint_cos(2) * r_joint_sin(1) * r_joint_sin(3)) - 
-                    L3 * r_joint_cos(2) * r_joint_sin(1);
-  l_position_w(0) = l_position_elbow(0) - L3 * (l_joint_sin(0) * l_joint_sin(2) - l_joint_cos(0) * l_joint_cos(1) * l_joint_cos(2)) + 
-                    L3 * (l_joint_cos(3) * (l_joint_sin(0) * l_joint_sin(2) - l_joint_cos(0) * l_joint_cos(1) * l_joint_cos(2)) - l_joint_cos(0) * l_joint_sin(1) * l_joint_sin(3)) + 
-                    L4 * (l_joint_sin(3) * (l_joint_sin(0) * l_joint_sin(2) - l_joint_cos(0) * l_joint_cos(1) * l_joint_cos(2)) + l_joint_cos(0) * l_joint_sin(1) * l_joint_cos(3));
-  l_position_w(1) = l_position_elbow(1) + L3 * (l_joint_cos(0) * l_joint_sin(2) + l_joint_sin(0) * l_joint_cos(1) * l_joint_cos(2)) - 
-                    L3 * (l_joint_cos(3) * (l_joint_cos(0) * l_joint_sin(2) + l_joint_sin(0) * l_joint_cos(1) * l_joint_cos(2)) + l_joint_sin(0) * l_joint_sin(1) * l_joint_sin(3)) - 
-                    L4 * (l_joint_sin(3) * (l_joint_cos(0) * l_joint_sin(2) + l_joint_sin(0) * l_joint_cos(1) * l_joint_cos(2)) - l_joint_sin(0) * l_joint_sin(1) * l_joint_cos(3));
-  l_position_w(2) = l_position_elbow(2) - L3 * ((l_joint_cos(1) * l_joint_sin(3)) - l_joint_cos(2) * l_joint_cos(3) * l_joint_sin(1)) + 
-                    L4 * (l_joint_cos(1) * l_joint_cos(3) + l_joint_cos(2) * l_joint_sin(1) * l_joint_sin(3)) - 
-                    L3 * l_joint_cos(2) * l_joint_sin(1);
-  */
+
   // right elbow/wrist v.s. left end effector
   if (((r_position_elbow - l_position_c).norm() >= 0.2 && (r_position_elbow - l_position_c).norm() < 0.22) || 
      ((r_position_w - l_position_c).norm() >= 0.15 && (r_position_w - l_position_c).norm() < 0.17)) {
