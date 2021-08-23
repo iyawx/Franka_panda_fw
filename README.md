@@ -102,4 +102,6 @@ URL: https://github.com/iyawx/franka_panda_controller_swc/commit/bfbfaf7c3791471
 _A = [0 -K K;  K 0 -K; -K K 0]   
 m = mass of the object_
 
+## Vidoe
+![ezgif com-gif-maker (1)](https://user-images.githubusercontent.com/79889031/130375329-de7d1102-1ed1-434a-b487-48d265a773d4.gif)
 
