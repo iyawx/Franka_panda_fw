@@ -31,9 +31,9 @@ rostopic pub -r 10 /cmd_vel geometry_msgs/Twist  "{linear:  {x: 0.1, y: 0.0, z: 
 > **Unity**
 1. Download ROS#
 2. ROS connector:  
-   > Serializer: Newtonsoft_JSON 
-   > Protocal: Web Socket Sharp
-   > ROS bridge Server URL: ws://`192.168.0.1`:9090
+   > Serializer: Newtonsoft_JSON  
+   > Protocal: Web Socket Sharp  
+   > ROS bridge Server URL: ws://`192.168.0.1`:9090  
 3. Odometry Subscriber: (just take `OdometrySubscriber` as a example)
    > Topic: /cmd_cel   
 
