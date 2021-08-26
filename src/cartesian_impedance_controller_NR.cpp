@@ -134,7 +134,9 @@ void CartesianImpedanceControllerNR::starting(const ros::Time& /*time*/) {
   // set nullspace equilibrium configuration to initial q
   q_d_nullspace_ = q_initial;
 
-  Eigen::Map<Eigen::Matrix<double, 6,1>> init_force(initial_state.K_F_ext_hat_K.data());
+
+  Eigen::Map<Eigen::Matrix<double, 7,1>> tau_sensor_init(initial_state.tau_J.data());
+
   force_acc.setZero();
 }
 
@@ -213,7 +215,31 @@ void CartesianImpedanceControllerNR::update(const ros::Time& /*time*/,
     unity_publisher_.msg_.linear.x = uni_input_p[12];
     unity_publisher_.msg_.linear.y = uni_input_p[13];
     unity_publisher_.msg_.linear.z = uni_input_p[14];
-    
+
+    Eigen::Map<Eigen::Matrix<double, 7,1>> tau_sensor(robot_state.tau_ext_hat_filtered.data());
+    Eigen::Matrix<double, 6,1> force_sensor;
+    Eigen::Matrix<double, 3,3> force_const;
+    Eigen::Matrix<double, 3,1> force_input;
+    Eigen::Matrix<double, 3,1> uni_input_f;
+    force_sensor = jacobian_transpose_pinv * tau_sensor;
+    init_force = jacobian_transpose_pinv * tau_sensor_init;
+    force_const(0,1) = -F_K_;
+    force_const(0,2) = F_K_;
+    force_const(1,0) = F_K_;
+    force_const(1,2) = -F_K_;
+    force_const(2,0) = -F_K_;
+    force_const(2,1) = F_K_;
+    for (size_t i = 0; i < 3; ++i) {
+      force_input(i) = (force_sensor(i) - init_force(i)) / obj_mass_;
+    }
+    force_acc = force_acc + force_input;
+    uni_input_f = force_const * force_acc / 500;
+
+    std::cout << force_sensor(0) << "  ";
+    std::cout << force_sensor(1) << "  ";
+    std::cout << force_sensor(2) << "\n";
+
+    /*
     Eigen::Map<Eigen::Matrix<double, 6,1>> force_sensor(robot_state.K_F_ext_hat_K.data());
     Eigen::Matrix<double, 3,1> force_input;
     Eigen::Matrix<double, 3,3> force_const;
@@ -245,6 +271,9 @@ void CartesianImpedanceControllerNR::update(const ros::Time& /*time*/,
     }
     force_acc = force_acc + force_input;
     uni_input_f = force_const * force_acc / 500;
+    */
+
+
     unity_publisher_.msg_.angular.x = uni_input_f[0];
     unity_publisher_.msg_.angular.y = uni_input_f[1];
     unity_publisher_.msg_.angular.z = uni_input_f[2];
@@ -280,9 +309,9 @@ void CartesianImpedanceControllerNR::complianceParamCallback(
   cartesian_damping_target_.setIdentity();
   // Damping ratio = 1
   cartesian_damping_target_.topLeftCorner(3, 3)
-      << 2.8 * sqrt(config.translational_stiffness) * Eigen::Matrix3d::Identity();
+      << 2  * sqrt(config.translational_stiffness) * Eigen::Matrix3d::Identity();
   cartesian_damping_target_.bottomRightCorner(3, 3)
-      << 2.8 * sqrt(config.rotational_stiffness) * Eigen::Matrix3d::Identity();
+      << 2 * sqrt(config.rotational_stiffness) * Eigen::Matrix3d::Identity();
   nullspace_stiffness_target_ = config.nullspace_stiffness;
 }
 
