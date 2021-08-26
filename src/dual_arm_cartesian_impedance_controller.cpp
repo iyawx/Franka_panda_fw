@@ -248,7 +248,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   Eigen::Quaterniond orientation(transform.linear());
 
   
-  //*******************Collision position: start*******************
+  //*******************Position: start*******************
   auto& left_arm_data = arms_data_.at(left_arm_id_);
   auto& right_arm_data = arms_data_.at(right_arm_id_);
   if (robot_state.O_T_EE[14] >= 0.35) {
@@ -277,7 +277,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
       left_arm_data.position_d_target_up(2) = 0.28;
     }
   }
-  //*******************Collision position: end*******************
+  //*******************Position: end*******************
   
   
   //*******************Orientation: start*******************
@@ -414,6 +414,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   Eigen::VectorXd r_joint_cos(7), r_joint_sin(7), l_joint_cos(7), l_joint_sin(7);
   double distance_robots = 0.8;
   double flag = 0;
+  double logistic_fun = 0;
 
   //**************end effector**************
 
@@ -425,18 +426,20 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   r_position_c(1) = r_position_c(1) - 0.08;
   l_position_c(1) = l_position_c(1) - distance_robots + 0.08;
   if ((r_position_c - l_position_c).norm() >= 0.15 && (r_position_c - l_position_c).norm() < 0.16) {
+    logistic_fun = 0;
     arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << 0 * Eigen::Matrix3d::Identity();
     arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 0 * Eigen::Matrix3d::Identity();
   } else if ((r_position_c - l_position_c).norm() < 0.15){
+    logistic_fun = 50/(1+exp(-100*(0.13-(r_position_c - l_position_c).norm())));
     arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
-      << 40 * Eigen::Matrix3d::Identity();
+      << logistic_fun * Eigen::Matrix3d::Identity();
     arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
-      << 2 * sqrt(40) * Eigen::Matrix3d::Identity();
+      << 2 * sqrt(logistic_fun) * Eigen::Matrix3d::Identity();
     flag = 1;
   }
-
+  std::cout << logistic_fun << "  " << (0.13-(r_position_c - l_position_c).norm()) << "\n";
   //**************base and shoulder**************
 
   if (flag != 1) {

@@ -114,16 +114,30 @@ void CartesianImpedanceController::starting(const ros::Time& /*time*/) {
       model_handle_->getZeroJacobian(franka::Frame::kEndEffector);
   // convert to eigen
   Eigen::Map<Eigen::Matrix<double, 7, 1>> q_initial(initial_state.q.data());
+
   Eigen::Affine3d initial_transform(Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
 
   // set equilibrium point to current state
   position_d_ = initial_transform.translation();
   orientation_d_ = Eigen::Quaterniond(initial_transform.linear());
+
+  /*pose_desired_ = {0.0, 1.0, 0.0, 0.0,
+                  -1.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 1.0, 0.0,
+                  -0.2943, 0.5448, 0.7854, 1.0};*/
+  /*pose_desired_ = {1.0, 0.0, 0.0, 0.0,
+                  0.0, 1.0, 0.0, 0.0,
+                  0.0, 0.0, 1.0, 0.0,
+                  -0.2943, 0.5448, 0.7854, 1.0};*/
+
   position_d_target_ = initial_transform.translation();
   orientation_d_target_ = Eigen::Quaterniond(initial_transform.linear());
-
+  
   // set nullspace equilibrium configuration to initial q
   q_d_nullspace_ = q_initial;
+  /*
+  q_null_desired_ = {0, -M_PI_4, 1.643, -1.607, -2.271, 1.439, 0.672};
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> q_d_nullspace_(q_null_desired_.data());*/
 }
 
 void CartesianImpedanceController::update(const ros::Time& /*time*/,
@@ -170,7 +184,23 @@ void CartesianImpedanceController::update(const ros::Time& /*time*/,
   desired_force_torque(2) = 0.5 * -9.81;
   tau_f << jacobian.transpose() * desired_force_torque;*/
 
-
+  //std::cout << position_d_target_[0] << "  " << position_d_target_[1] << "  " << position_d_target_[2] <<"\n";
+  pose_desired_ = {0.0, 1.0, 0.0, 0.0,
+                  -1.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 1.0, 0.0,
+                  -0.2943, 0.5448, 0.7854, 1.0};
+  Eigen::Affine3d pose_target(Eigen::Matrix4d::Map(pose_desired_.data()));
+  position_d_target_ = pose_target.translation();
+  orientation_d_target_ = Eigen::Quaterniond(pose_target.linear());
+  q_null_desired_ = {0, -M_PI_4, 1.643, -1.607, -2.271, M_PI_2, M_PI_4};
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> q_d_nullspace_(q_null_desired_.data());
+  
+  if ((position-position_d_target_).norm() <= 0.05) {
+    cartesian_stiffness_target_.bottomRightCorner(3, 3)
+      << 15 * Eigen::Matrix3d::Identity();
+    cartesian_damping_target_.bottomRightCorner(3, 3)
+      << 2.0 * sqrt(15) * Eigen::Matrix3d::Identity();
+  }
 
   // pseudoinverse for nullspace handling
   // kinematic pseuoinverse
