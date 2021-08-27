@@ -46,3 +46,10 @@ roslaunch franka_panda_controller_swc cartesian_impedance_controller.launch robo
 ```
 roslaunch franka_panda_controller_swc dual_arm_cartesian_impedance_controller.launch
 ```
+---
+#### Plot velocities and distance of dual cartisan impedance controller porject
+```
+rqt_plot /panda_dual/dual_arm_cartesian_impedance_controller/velocity/distance
+rqt_plot /panda_dual/dual_arm_cartesian_impedance_controller/velocity/left_vel
+rqt_plot /panda_dual/dual_arm_cartesian_impedance_controller/velocity/right_vel
+```
