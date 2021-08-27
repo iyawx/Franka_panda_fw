@@ -170,6 +170,7 @@ bool DualArmCartesianImpedanceController::init(hardware_interface::RobotHW* robo
   // Setup publisher for the centering frame.
   publish_rate_ = franka_hw::TriggerRate(30.0);
   center_frame_pub_.init(node_handle, "centering_frame", 1, true);
+  vel_publisher_.init(node_handle, "velocity", 1);
 
   return left_success && right_success;
 }
@@ -622,7 +623,6 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
     flag = 4;
   }
   }
-  //std::cout << (l_position_w - r_position_w).norm() <<"\n";
   //*******************Collision avoidance: end*******************
   if (robot_state.O_T_EE[14] < 0.35 && robot_state.O_T_EE[12] < 0.15) {
     if (r_position_c(0) > l_position_c(0)) {
@@ -640,7 +640,29 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
       right_arm_data.position_d_target_up(2) = 0.20;
     }
   }
-  //std::cout << (r_position_c - l_position_c).norm() << "\n";
+
+  //*******************Speed : start*******************
+  Eigen::VectorXd end_vel_r(6), end_vel_r_linear(3), end_vel_l(6), end_vel_l_linear(3);
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> dq_r(robot_state_right.dq.data());
+  Eigen::Map<Eigen::Matrix<double, 7, 1>> dq_l(robot_state_left.dq.data());
+  end_vel_r = jacobian * dq_r;
+  end_vel_l = jacobian * dq_l;
+  for (size_t i = 0; i < 3; ++i) {
+    end_vel_r_linear(i) = end_vel_r(i);
+    end_vel_l_linear(i) = end_vel_l(i);
+  }
+  //*******************Speed : end*******************
+  if (vel_publisher_.trylock()) {
+    vel_publisher_.msg_.right_vel = end_vel_r_linear.norm();
+    vel_publisher_.msg_.left_vel = end_vel_l_linear.norm();
+    vel_publisher_.msg_.distance = (r_position_c - l_position_c).norm();
+    vel_publisher_.unlockAndPublish();
+  }
+
+
+
+
+
 
   // update parameters changed online either through dynamic reconfigure or through the interactive
   // target by filtering
