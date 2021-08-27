@@ -642,6 +642,10 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   }
 
   //*******************Speed : start*******************
+  double vel_r;
+  double vel_l;
+  double max_r, max_l;
+  double min_r, min_l;
   Eigen::VectorXd end_vel_r(6), end_vel_r_linear(3), end_vel_l(6), end_vel_l_linear(3);
   Eigen::Map<Eigen::Matrix<double, 7, 1>> dq_r(robot_state_right.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> dq_l(robot_state_left.dq.data());
@@ -653,10 +657,29 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   }
   //*******************Speed : end*******************
   if (vel_publisher_.trylock()) {
-    vel_publisher_.msg_.right_vel = end_vel_r_linear.norm();
-    vel_publisher_.msg_.left_vel = end_vel_l_linear.norm();
+    min_r = fmin(fmin(fmin(fmin(fmin(end_vel_r_linear.norm(),pre_v1_r), pre_v2_r), pre_v3_r), pre_v4_r),pre_v5_r);
+    min_l = fmin(fmin(fmin(fmin(fmin(end_vel_l_linear.norm(),pre_v1_l), pre_v2_l), pre_v3_l), pre_v4_l),pre_v5_l);
+    max_r = fmax(fmax(fmax(fmax(fmax(end_vel_r_linear.norm(),pre_v1_r), pre_v2_r), pre_v3_r), pre_v4_r),pre_v5_r);
+    max_l = fmax(fmax(fmax(fmax(fmax(end_vel_l_linear.norm(),pre_v1_l), pre_v2_l), pre_v3_l), pre_v4_l),pre_v5_l);
+    vel_r = (end_vel_r_linear.norm() + pre_v1_r + pre_v2_r + pre_v3_r + pre_v4_r + pre_v5_r - min_r - max_r)/4;
+    vel_l = (end_vel_l_linear.norm() + pre_v1_l + pre_v2_l + pre_v3_l + pre_v4_l + pre_v5_l - min_l - max_l)/4;
+    vel_publisher_.msg_.right_vel = vel_r;
+    vel_publisher_.msg_.left_vel = vel_l;
     vel_publisher_.msg_.distance = (r_position_c - l_position_c).norm();
     vel_publisher_.unlockAndPublish();
+    pre_v1_r = pre_v2_r;
+    pre_v2_r = pre_v3_r;
+    pre_v3_r = pre_v4_r;
+    pre_v4_r = pre_v5_r;
+    pre_v5_r = pre_v6_r;
+    pre_v6_r = end_vel_r_linear.norm();
+    pre_v1_l = pre_v2_l;
+    pre_v2_l = pre_v3_l;
+    pre_v3_l = pre_v4_l;
+    pre_v4_l = pre_v5_l;
+    pre_v5_l = pre_v6_l;
+    pre_v6_l = end_vel_l_linear.norm();
+
   }
 
 
