@@ -20,6 +20,8 @@
 #include <franka_hw/franka_model_interface.h>
 #include <franka_hw/franka_state_interface.h>
 #include <franka_hw/trigger_rate.h>
+#include <realtime_tools/realtime_publisher.h>
+#include <franka_panda_controller_swc/Velocity.h>
 
 namespace franka_panda_controller_swc {
 
@@ -107,7 +109,7 @@ class DualArmCartesianImpedanceController
   realtime_tools::RealtimePublisher<geometry_msgs::PoseStamped> center_frame_pub_;
   ///< Rate to trigger publishing the current pose of the centering frame.
   franka_hw::TriggerRate publish_rate_;
-
+  realtime_tools::RealtimePublisher<Velocity> vel_publisher_;
   /**
    * Saturates torque commands to ensure feasibility.
    *
@@ -140,7 +142,18 @@ class DualArmCartesianImpedanceController
    */
   void updateArm(FrankaDataContainer& arm_data);
 
-
+  double pre_v1_r = 10;
+  double pre_v2_r = 10;
+  double pre_v3_r = 10;
+  double pre_v4_r = 10;
+  double pre_v5_r = 10;
+  double pre_v6_r = 10;
+  double pre_v1_l = 10;
+  double pre_v2_l = 10;
+  double pre_v3_l = 10;
+  double pre_v4_l = 10;
+  double pre_v5_l = 10;
+  double pre_v6_l = 10;
   /**
    * Prepares all internal states to be ready to run the real-time control for one arm.
    *
