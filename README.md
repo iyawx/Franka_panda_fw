@@ -53,3 +53,8 @@ rqt_plot /panda_dual/dual_arm_cartesian_impedance_controller/velocity/distance
 rqt_plot /panda_dual/dual_arm_cartesian_impedance_controller/velocity/left_vel
 rqt_plot /panda_dual/dual_arm_cartesian_impedance_controller/velocity/right_vel
 ```
+---
+#### To record the data
+```
+rosbag record -O subset /panda_dual/dual_arm_cartesian_impedance_controller/velocity
+```
