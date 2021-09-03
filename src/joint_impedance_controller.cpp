@@ -156,6 +156,10 @@ void JointImpedanceController::starting(const ros::Time& /*time*/) {
               -1.0, 0.0, 0.0, 0.0,
               0.0, 0.0, 1.0, 0.0,
               -0.328405, 0.549474, 0.785429, 1.0};*/
+  /*end_pose_ = {0.0, 1.0, 0.0, 0.0,
+                  -1.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 1.0, 0.0,
+                  -0.2943, 0.5448, 0.7854, 1.0};*/
 
   // final end-effector config
   end_elbow_ = {1.5, -1.0};

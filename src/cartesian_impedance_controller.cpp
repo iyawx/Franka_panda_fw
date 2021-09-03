@@ -197,9 +197,9 @@ void CartesianImpedanceController::update(const ros::Time& /*time*/,
   
   if ((position-position_d_target_).norm() <= 0.05) {
     cartesian_stiffness_target_.bottomRightCorner(3, 3)
-      << 15 * Eigen::Matrix3d::Identity();
+      << 20 * Eigen::Matrix3d::Identity();
     cartesian_damping_target_.bottomRightCorner(3, 3)
-      << 2.0 * sqrt(15) * Eigen::Matrix3d::Identity();
+      << 2.0 * sqrt(20) * Eigen::Matrix3d::Identity();
   }
 
   // pseudoinverse for nullspace handling

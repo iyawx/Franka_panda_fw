@@ -396,18 +396,6 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   } 
   //*******************joint limit: end*******************
 
-
-  /*
-  //*******************Speed limit: start*******************
-  Eigen::VectorXd end_vel(6), end_vel_trans(3);
-  end_vel = jacobian * dq;
-  for (size_t i = 0; i < 3; ++i) {
-    end_vel_trans(i) = end_vel(i);
-  }
-  
-  //*******************Speed limit: end*******************
-  */
-
   //*******************Collision avoidance: start*******************
   franka::RobotState robot_state_right = arms_data_.at(right_arm_id_).state_handle_->getRobotState();
   franka::RobotState robot_state_left = arms_data_.at(left_arm_id_).state_handle_->getRobotState();
@@ -444,49 +432,50 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
       << 2 * sqrt(logistic_fun) * Eigen::Matrix3d::Identity();
     flag = 1;
   }
-  // std::cout << logistic_fun << "  " << (0.13-(r_position_c - l_position_c).norm()) << "\n";
   //**************base and shoulder**************
 
   if (flag != 1) {
   // base
   r_position_b.setZero();
   l_position_b.setZero();
-  r_position_b(2) = 0.075;
+  r_position_b(2) = 0.12;
   l_position_b(2) = 0.075;
-  r_position_b(1) = -0.05;
-  l_position_b(1) = - distance_robots + 0.05;
+  r_position_b(1) = -0.03;
+  l_position_b(1) = - distance_robots + 0.03;
   // shoulder
   r_position_s = r_position_b;
   l_position_s = l_position_b;
   r_position_s(2) = 0.333;
   l_position_s(2) = 0.333;
+  
+  r_position_b(0) = 0.05;
 
-  if ((r_position_b - l_position_c).norm() < 0.2 || (r_position_s - l_position_c).norm() < 0.2) {
+  if ((r_position_b - l_position_c).norm() < 0.24 || (r_position_s - l_position_c).norm() < 0.24) {
     min_dis = fmin((r_position_b - l_position_c).norm(), (r_position_s - l_position_c).norm());
-    logistic_fun = 50/(1+exp(-100*(0.18-min_dis)));
+    logistic_fun = 50/(1+exp(-100*(0.22-min_dis)));
     left_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << logistic_fun * Eigen::Matrix3d::Identity();
     left_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 2 * sqrt(logistic_fun) * Eigen::Matrix3d::Identity();
     flag = 2;  
-  }else if (((r_position_b - l_position_c).norm() >= 0.2 && (r_position_b - l_position_c).norm() < 0.21) || 
-     ((r_position_s - l_position_c).norm() >= 0.2 && (r_position_s - l_position_c).norm() < 0.21)) {
+  }else if (((r_position_b - l_position_c).norm() >= 0.24 && (r_position_b - l_position_c).norm() < 0.25) || 
+     ((r_position_s - l_position_c).norm() >= 0.24 && (r_position_s - l_position_c).norm() < 0.25)) {
     logistic_fun = 0;
     left_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << logistic_fun * Eigen::Matrix3d::Identity();
     left_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << logistic_fun * Eigen::Matrix3d::Identity();
   }
-  if ((l_position_b - r_position_c).norm() < 0.2 || (l_position_s - r_position_c).norm() < 0.2) {
+  if ((l_position_b - r_position_c).norm() < 0.24 || (l_position_s - r_position_c).norm() < 0.24) {
     min_dis = fmin((l_position_b - r_position_c).norm(), (l_position_s - r_position_c).norm());
-    logistic_fun = 50/(1+exp(-100*(0.18-min_dis)));
+    logistic_fun = 50/(1+exp(-100*(0.22-min_dis)));
     right_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << logistic_fun * Eigen::Matrix3d::Identity();
     right_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 2 * sqrt(logistic_fun) * Eigen::Matrix3d::Identity();
     flag = 2; 
-  }else if (((l_position_b - r_position_c).norm() >= 0.2 && (l_position_b - r_position_c).norm() < 0.21) || 
-     ((l_position_s - r_position_c).norm() >= 0.2 && (l_position_s - r_position_c).norm() < 0.21)) {
+  }else if (((l_position_b - r_position_c).norm() >= 0.24 && (l_position_b - r_position_c).norm() < 0.25) || 
+     ((l_position_s - r_position_c).norm() >= 0.24 && (l_position_s - r_position_c).norm() < 0.25)) {
     logistic_fun = 0;
     right_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << logistic_fun * Eigen::Matrix3d::Identity();
@@ -509,7 +498,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
     l_joint_cos(i) = std::cos(robot_state_left.q[i]);
     l_joint_sin(i) = std::sin(robot_state_left.q[i]);
   }
-   // elbow 
+  // elbow 
   r_position_elbow(0) = L2 * r_joint_cos(0) * r_joint_sin(1) - L3 * (r_joint_sin(0) * r_joint_sin(2) - r_joint_cos(0) * r_joint_cos(1) * r_joint_cos(2));
   r_position_elbow(1) = L2 * r_joint_sin(0) * r_joint_sin(1) + L3 * (r_joint_cos(0) * r_joint_sin(2) + r_joint_sin(0) * r_joint_cos(1) * r_joint_cos(2));
   r_position_elbow(2) = L1 + L2 * r_joint_cos(1) - L3 * r_joint_cos(2) * r_joint_sin(1);
@@ -548,6 +537,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
       << logistic_fun * Eigen::Matrix3d::Identity();
     left_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 2 * sqrt(logistic_fun) * Eigen::Matrix3d::Identity();
+      flag = 4;
   }
   // left wrist v.s. right end effector
   if ((l_position_w - r_position_c).norm() >= 0.25 && (l_position_w - r_position_c).norm() < 0.26) {
@@ -558,11 +548,11 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
       << logistic_fun * Eigen::Matrix3d::Identity();
   } else if ((l_position_w - r_position_c).norm() < 0.25) {
     logistic_fun = 50/(1+exp(-100*(0.23-(l_position_w - r_position_c).norm())));
-    left_arm_data.nullspace_stiffness_target_ = 5.0;
     right_arm_data.cartesian_stiffness_target_.topLeftCorner(3, 3)
       << logistic_fun * Eigen::Matrix3d::Identity();
     right_arm_data.cartesian_damping_target_.topLeftCorner(3, 3)
       << 2 * sqrt(logistic_fun) * Eigen::Matrix3d::Identity();
+    flag = 4;
   }
  
   // right elbow v.s. left end effector
@@ -632,20 +622,20 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
     }
   }
   if (flag == 4) {
-    if (r_position_c(0) > l_position_c(0)) {
-      right_arm_data.position_d_target_up(2) = 0.55;
+    if (r_position_c(1) > l_position_c(1)) {
+      right_arm_data.position_d_target_up(2) = 0.60;
       left_arm_data.position_d_target_up(2) = 0.20;
     } else {
-      left_arm_data.position_d_target_up(2) = 0.55;
+      left_arm_data.position_d_target_up(2) = 0.60;
       right_arm_data.position_d_target_up(2) = 0.20;
     }
   }
 
   //*******************Speed : start*******************
-  double vel_r;
+  /*double vel_r;
   double vel_l;
   double max_r, max_l;
-  double min_r, min_l;
+  double min_r, min_l;*/
   Eigen::VectorXd end_vel_r(6), end_vel_r_linear(3), end_vel_l(6), end_vel_l_linear(3);
   Eigen::Map<Eigen::Matrix<double, 7, 1>> dq_r(robot_state_right.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> dq_l(robot_state_left.dq.data());
@@ -657,17 +647,23 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   }
   //*******************Speed : end*******************
   if (vel_publisher_.trylock()) {
-    min_r = fmin(fmin(fmin(fmin(fmin(end_vel_r_linear.norm(),pre_v1_r), pre_v2_r), pre_v3_r), pre_v4_r),pre_v5_r);
+    /*min_r = fmin(fmin(fmin(fmin(fmin(end_vel_r_linear.norm(),pre_v1_r), pre_v2_r), pre_v3_r), pre_v4_r),pre_v5_r);
     min_l = fmin(fmin(fmin(fmin(fmin(end_vel_l_linear.norm(),pre_v1_l), pre_v2_l), pre_v3_l), pre_v4_l),pre_v5_l);
     max_r = fmax(fmax(fmax(fmax(fmax(end_vel_r_linear.norm(),pre_v1_r), pre_v2_r), pre_v3_r), pre_v4_r),pre_v5_r);
     max_l = fmax(fmax(fmax(fmax(fmax(end_vel_l_linear.norm(),pre_v1_l), pre_v2_l), pre_v3_l), pre_v4_l),pre_v5_l);
     vel_r = (end_vel_r_linear.norm() + pre_v1_r + pre_v2_r + pre_v3_r + pre_v4_r + pre_v5_r - min_r - max_r)/4;
     vel_l = (end_vel_l_linear.norm() + pre_v1_l + pre_v2_l + pre_v3_l + pre_v4_l + pre_v5_l - min_l - max_l)/4;
-    vel_publisher_.msg_.right_vel = vel_r;
-    vel_publisher_.msg_.left_vel = vel_l;
+    vel_publisher_.msg_.right_vel = (r_position_s - l_position_c).norm();
+    vel_publisher_.msg_.left_vel = end_vel_l_linear.norm();
+    vel_publisher_.msg_.distance = (r_position_b - l_position_c).norm();
+    */
+    vel_publisher_.msg_.right_vel = end_vel_r_linear.norm();
+    vel_publisher_.msg_.left_vel = end_vel_l_linear.norm();
     vel_publisher_.msg_.distance = (r_position_c - l_position_c).norm();
+
     vel_publisher_.unlockAndPublish();
-    pre_v1_r = pre_v2_r;
+
+    /*pre_v1_r = pre_v2_r;
     pre_v2_r = pre_v3_r;
     pre_v3_r = pre_v4_r;
     pre_v4_r = pre_v5_r;
@@ -678,13 +674,14 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
     pre_v3_l = pre_v4_l;
     pre_v4_l = pre_v5_l;
     pre_v5_l = pre_v6_l;
-    pre_v6_l = end_vel_l_linear.norm();
+    pre_v6_l = end_vel_l_linear.norm();*/
 
   }
-
-
-
-
+  /*
+    dis_publisher_.msg_.distance1 = (r_position_elbow - l_position_c).norm();
+    dis_publisher_.msg_.distance2 = (r_position_s - l_position_c).norm();
+    dis_publisher_.msg_.distance3 = (r_position_b - l_position_c).norm();
+  */
 
 
   // update parameters changed online either through dynamic reconfigure or through the interactive
