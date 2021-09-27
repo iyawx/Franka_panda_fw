@@ -58,3 +58,17 @@ rqt_plot /panda_dual/dual_arm_cartesian_impedance_controller/velocity/right_vel
 ```
 rosbag record -O subset /panda_dual/dual_arm_cartesian_impedance_controller/velocity
 ```
+
+
+## Vidoe
+#### two moving bodies collisions
+![gif3](https://user-images.githubusercontent.com/79889031/134857667-35bdc2cd-7474-45cf-90a9-bdc0b7ecb067.gif)
+
+#### Semi-moving bodies collisions
+![gif2](https://user-images.githubusercontent.com/79889031/134857638-457e5273-5fb8-4a32-b67c-e3f175efa242.gif)
+
+#### One static and one moving bodies collision
+![gif4](https://user-images.githubusercontent.com/79889031/134857694-a2a8a860-8b62-45c8-9ab6-1e84b38841dc.gif)
+
+#### Test  
+![gif1](https://user-images.githubusercontent.com/79889031/134857330-82e714e4-4e8f-47c6-b29d-77b71d0762ef.gif)
