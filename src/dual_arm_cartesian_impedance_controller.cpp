@@ -614,6 +614,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   }
   }
   //*******************Collision avoidance: end*******************
+  // lower-middle area equilibrium point (front-back)
   if (robot_state.O_T_EE[14] < 0.35 && robot_state.O_T_EE[12] < 0.15) {
     if (r_position_c(0) > l_position_c(0)) {
       left_arm_data.position_d_target_up(0) = -0.15;
@@ -621,6 +622,7 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
       right_arm_data.position_d_target_up(0) = -0.15;
     }
   }
+  // lower-front area equilibrium point (up-down)
   if (flag == 4) {
     if (r_position_c(1) > l_position_c(1)) {
       right_arm_data.position_d_target_up(2) = 0.60;
@@ -632,10 +634,6 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
   }
 
   //*******************Speed : start*******************
-  /*double vel_r;
-  double vel_l;
-  double max_r, max_l;
-  double min_r, min_l;*/
   Eigen::VectorXd end_vel_r(6), end_vel_r_linear(3), end_vel_l(6), end_vel_l_linear(3);
   Eigen::Map<Eigen::Matrix<double, 7, 1>> dq_r(robot_state_right.dq.data());
   Eigen::Map<Eigen::Matrix<double, 7, 1>> dq_l(robot_state_left.dq.data());
@@ -646,42 +644,16 @@ void DualArmCartesianImpedanceController::updateArm(FrankaDataContainer& arm_dat
     end_vel_l_linear(i) = end_vel_l(i);
   }
   //*******************Speed : end*******************
-  if (vel_publisher_.trylock()) {
-    /*min_r = fmin(fmin(fmin(fmin(fmin(end_vel_r_linear.norm(),pre_v1_r), pre_v2_r), pre_v3_r), pre_v4_r),pre_v5_r);
-    min_l = fmin(fmin(fmin(fmin(fmin(end_vel_l_linear.norm(),pre_v1_l), pre_v2_l), pre_v3_l), pre_v4_l),pre_v5_l);
-    max_r = fmax(fmax(fmax(fmax(fmax(end_vel_r_linear.norm(),pre_v1_r), pre_v2_r), pre_v3_r), pre_v4_r),pre_v5_r);
-    max_l = fmax(fmax(fmax(fmax(fmax(end_vel_l_linear.norm(),pre_v1_l), pre_v2_l), pre_v3_l), pre_v4_l),pre_v5_l);
-    vel_r = (end_vel_r_linear.norm() + pre_v1_r + pre_v2_r + pre_v3_r + pre_v4_r + pre_v5_r - min_r - max_r)/4;
-    vel_l = (end_vel_l_linear.norm() + pre_v1_l + pre_v2_l + pre_v3_l + pre_v4_l + pre_v5_l - min_l - max_l)/4;
-    vel_publisher_.msg_.right_vel = (r_position_s - l_position_c).norm();
-    vel_publisher_.msg_.left_vel = end_vel_l_linear.norm();
-    vel_publisher_.msg_.distance = (r_position_b - l_position_c).norm();
-    */
+    
+  // publishing the message for data collection
+  if (vel_publisher_.trylock()) {    
     vel_publisher_.msg_.right_vel = end_vel_r_linear.norm();
     vel_publisher_.msg_.left_vel = end_vel_l_linear.norm();
     vel_publisher_.msg_.distance = (r_position_c - l_position_c).norm();
 
     vel_publisher_.unlockAndPublish();
 
-    /*pre_v1_r = pre_v2_r;
-    pre_v2_r = pre_v3_r;
-    pre_v3_r = pre_v4_r;
-    pre_v4_r = pre_v5_r;
-    pre_v5_r = pre_v6_r;
-    pre_v6_r = end_vel_r_linear.norm();
-    pre_v1_l = pre_v2_l;
-    pre_v2_l = pre_v3_l;
-    pre_v3_l = pre_v4_l;
-    pre_v4_l = pre_v5_l;
-    pre_v5_l = pre_v6_l;
-    pre_v6_l = end_vel_l_linear.norm();*/
-
   }
-  /*
-    dis_publisher_.msg_.distance1 = (r_position_elbow - l_position_c).norm();
-    dis_publisher_.msg_.distance2 = (r_position_s - l_position_c).norm();
-    dis_publisher_.msg_.distance3 = (r_position_b - l_position_c).norm();
-  */
 
 
   // update parameters changed online either through dynamic reconfigure or through the interactive
